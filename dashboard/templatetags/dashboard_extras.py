@@ -31,6 +31,16 @@ def signed(value, digits=2):
 
 
 @register.filter
+def money(value, digits=2):
+    try:
+        number = Decimal(str(value or 0))
+        amount = f"${abs(number):,.{int(digits)}f}"
+        return f"-{amount}" if number < 0 else f"+{amount}" if number > 0 else amount
+    except Exception:
+        return value
+
+
+@register.filter
 def pct(value, goal):
     try:
         return min(max(float(value or 0) / float(goal or 1) * 100, 0), 140)
@@ -42,5 +52,21 @@ def pct(value, goal):
 def mul(value, multiplier):
     try:
         return Decimal(str(value or 0)) * Decimal(str(multiplier))
+    except Exception:
+        return 0
+
+
+@register.filter
+def neg(value):
+    try:
+        return -Decimal(str(value or 0))
+    except Exception:
+        return 0
+
+
+@register.filter
+def absnum(value):
+    try:
+        return abs(Decimal(str(value or 0)))
     except Exception:
         return 0

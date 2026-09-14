@@ -72,8 +72,10 @@ def day_detail(request, date):
     day = recalculate_day(day)
     cards = []
     for key, meta in MODULE_META.items():
+        value = Decimal(str(day.module_values_h.get(key, 0)))
         cards.append({
-            "key": key, **meta, "value": Decimal(str(day.module_values_h.get(key, 0))),
+            "key": key, **meta, "value": value,
+            "value_mxn": (value * day.hour_value_mxn).quantize(Decimal("0.01")),
             "breakdown": day.module_breakdowns.get(key, {}),
         })
     adjustment_form = AdjustmentForm(initial={"adjustment_h": day.adjustment_h, "adjustment_justification": day.adjustment_justification})
@@ -130,10 +132,16 @@ def _module_render(request, day, module, bound_form=None):
         "social": bound_form or SocialForm(instance=social),
     }
     state = day.section_states.get(module=module)
+    module_index = MODULE_KEYS.index(module)
+    previous_module = MODULE_KEYS[(module_index - 1) % len(MODULE_KEYS)]
+    next_module = MODULE_KEYS[(module_index + 1) % len(MODULE_KEYS)]
+    module_value = Decimal(str(day.module_values_h.get(module, 0)))
     context = {
         "day": day, "module": module, "meta": MODULE_META[module], "form": forms[module], "state": state,
-        "breakdown": day.module_breakdowns.get(module, {}), "module_value": day.module_values_h.get(module, 0),
-        "previous_date": day.date - dt.timedelta(days=1), "next_date": day.date + dt.timedelta(days=1),
+        "breakdown": day.module_breakdowns.get(module, {}), "module_value": module_value,
+        "module_value_mxn": (module_value * day.hour_value_mxn).quantize(Decimal("0.01")),
+        "previous_module": previous_module, "previous_module_meta": MODULE_META[previous_module],
+        "next_module": next_module, "next_module_meta": MODULE_META[next_module],
         "body": body, "photo_form": BodyPhotoForm(), "photos": body.photos.all(),
         "meals": day.meals.all(), "activities": day.activities.all(), "supplements": day.supplements.all(),
         "supplement_form": SupplementForm(), "editing_meal": editing_meal, "editing_activity": editing_activity,
@@ -368,22 +376,30 @@ def dashboard_view(request):
     previous_start, previous_end = start - dt.timedelta(days=span), start - dt.timedelta(days=1)
     previous_days = list(DayRecord.objects.filter(date__range=(previous_start, previous_end)))
     total = sum((day.final_value_h for day in days), Decimal("0"))
+    total_mxn = sum((day.final_value_mxn for day in days), Decimal("0"))
     average = total / len(days) if days else Decimal("0")
+    average_mxn = total_mxn / len(days) if days else Decimal("0")
     module_rows = []
     for key, meta in MODULE_META.items():
         value = sum((Decimal(str(day.module_values_h.get(key, 0))) for day in days), Decimal("0"))
         previous_value = sum((Decimal(str(day.module_values_h.get(key, 0))) for day in previous_days), Decimal("0"))
+        value_mxn = sum((Decimal(str(day.module_values_h.get(key, 0))) * day.hour_value_mxn for day in days), Decimal("0"))
+        previous_value_mxn = sum((Decimal(str(day.module_values_h.get(key, 0))) * day.hour_value_mxn for day in previous_days), Decimal("0"))
         module_rows.append({
-            "key": key, "name": meta["name"], "value": value, "average": value / len(days) if days else 0,
-            "contribution": (value / total * 100) if total else 0, "change": value - previous_value,
-            "series": [float(day.module_values_h.get(key, 0)) for day in days],
+            "key": key, "name": meta["name"], "is_record": key == "body",
+            "value": value, "value_mxn": value_mxn,
+            "average": value / len(days) if days else 0, "average_mxn": value_mxn / len(days) if days else 0,
+            "contribution": (value_mxn / total_mxn * 100) if total_mxn else 0,
+            "change": value - previous_value, "change_mxn": value_mxn - previous_value_mxn,
+            "series": [float(Decimal(str(day.module_values_h.get(key, 0))) * day.hour_value_mxn) for day in days],
         })
     positive = sum(day.final_value_h > 0 for day in days)
     negative = sum(day.final_value_h < 0 for day in days)
     neutral = len(days) - positive - negative
-    best = max(days, key=lambda day: day.final_value_h) if days else None
-    worst = min(days, key=lambda day: day.final_value_h) if days else None
+    best = max(days, key=lambda day: day.final_value_mxn) if days else None
+    worst = min(days, key=lambda day: day.final_value_mxn) if days else None
     adjustment_total = sum((day.adjustment_h for day in days), Decimal("0"))
+    adjustment_total_mxn = sum((day.adjustment_mxn for day in days), Decimal("0"))
     config_changes = GlobalConfiguration.objects.filter(effective_from__date__range=(start, end)).order_by("effective_from")
     def total_path(module, key):
         return sum((Decimal(str((day.module_breakdowns.get(module) or {}).get(key) or 0)) for day in days), Decimal("0"))
@@ -408,10 +424,12 @@ def dashboard_view(request):
         {"name": "Vida social", "metrics": [("Tiempo bruto", social_raw, "h"), ("Tiempo bonificado", social_rewarded, "h"), ("Diferencia por topes", social_raw - social_rewarded, "h")]},
     ]
     return render(request, "dashboard/dashboard.html", {
-        "kind": kind, "start": start, "end": end, "days": days, "total": total, "average": average,
+        "kind": kind, "start": start, "end": end, "days": days, "total": total, "total_mxn": total_mxn,
+        "average": average, "average_mxn": average_mxn,
         "positive": positive, "negative": negative, "neutral": neutral, "complete": sum(day.status == "complete" for day in days),
         "partial": sum(day.status != "complete" for day in days), "best": best, "worst": worst,
-        "module_rows": module_rows, "adjustment_total": adjustment_total, "config_changes": config_changes,
+        "module_rows": module_rows, "adjustment_total": adjustment_total,
+        "adjustment_total_mxn": adjustment_total_mxn, "config_changes": config_changes,
         "behavior_groups": behavior_groups,
     })
 

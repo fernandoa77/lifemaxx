@@ -22,9 +22,9 @@
     </div>
     <div class="balance-block">
       <span>BALANCE DEL DIA</span>
-      <strong class="balance {% if day.final_value_h > 0 %}positive{% elif day.final_value_h < 0 %}negative{% endif %}">{{ day.final_value_h|signed }}<small>H</small></strong>
-      <em>${{ day.final_value_mxn|floatformat:2 }} MXN</em>
-      <div class="equation"><span>Auto {{ day.automatic_value_h|signed }}H</span><b>+</b><span>Ajuste {{ day.adjustment_h|signed }}H</span></div>
+      <strong class="balance {% if day.final_value_h > 0 %}positive{% elif day.final_value_h < 0 %}negative{% endif %}">{{ day.final_value_mxn|money }}<small>MXN</small></strong>
+      <em>{{ day.final_value_h|signed }}H</em>
+      <div class="equation"><span>Auto {{ day.automatic_value_h|mul:day.configuration_snapshot.hour_value_mxn|money }}</span><b>+</b><span>Ajuste {{ day.adjustment_mxn|money }}</span></div>
     </div>
   </div>
 </section>
@@ -39,7 +39,12 @@
   <a class="module-card module-{{ card.key }}" href="{% url 'dashboard:module' day.date|date:'Y-m-d' card.key %}">
     <div class="card-top"><span class="module-index">0{{ forloop.counter }}</span><span class="pill">{{ card.eyebrow }}</span><span class="card-arrow">↗</span></div>
     <h3>{{ card.name }}</h3>
-    <strong class="module-value {% if card.value > 0 %}positive{% elif card.value < 0 %}negative{% endif %}">{{ card.value|signed }}H</strong>
+    {% if card.key == 'body' %}
+      <strong class="module-value record-only">REGISTRO</strong>
+    {% else %}
+      <strong class="module-value {% if card.value > 0 %}positive{% elif card.value < 0 %}negative{% endif %}">{{ card.value_mxn|money }}</strong>
+      <span class="module-hours">{{ card.value|signed }}H</span>
+    {% endif %}
     <div class="card-summary">
       {% if card.key == 'body' %}
         <div><span>Peso AM</span><b>{{ card.breakdown.weight_am_kg|default:'—' }}{% if card.breakdown.weight_am_kg %} kg{% endif %}</b></div>
@@ -72,7 +77,7 @@
 </section>
 
 <section class="adjustment-panel">
-  <div><p class="eyebrow">INTERVENCION MANUAL</p><h2>Ajuste marginal</h2><p>Corrige el balance sin alterar reglas, rachas ni inputs de otros modulos.</p></div>
+  <div><p class="eyebrow">INTERVENCION MANUAL</p><h2>Ajuste marginal</h2></div>
   <form method="post" action="{% url 'dashboard:adjustment' day.date|date:'Y-m-d' %}">
     {% csrf_token %}
     <div class="inline-fields">{% for field in adjustment_form %}<label>{{ field.label }}{{ field }}{{ field.errors }}</label>{% endfor %}</div>

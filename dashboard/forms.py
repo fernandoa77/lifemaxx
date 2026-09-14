@@ -118,13 +118,6 @@ class MentalForm(StyledModelForm):
             "active_intermediate_description": forms.Textarea(attrs={"rows": 2}),
             "active_positive_description": forms.Textarea(attrs={"rows": 2}),
         }
-        help_texts = {
-            "passive_positive_minutes": "Ejemplo: lectura.",
-            "passive_intermediate_minutes": "X/Twitter en computadora, YouTube o pelicula valida.",
-            "passive_negative_minutes": "Scroll y consumo pasivo negativo.",
-            "active_intermediate_minutes": "Ajedrez, puzzles, soroban o investigacion con ChatGPT.",
-            "active_positive_minutes": "SOA, programacion personal, marca personal o reuniones constructivas.",
-        }
 
 
 class SocialForm(StyledModelForm):

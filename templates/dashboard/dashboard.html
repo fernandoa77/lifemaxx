@@ -14,8 +14,8 @@
 </header>
 
 <section class="kpi-grid">
-  <article class="kpi hero-kpi"><span>BALANCE TOTAL</span><strong class="{% if total > 0 %}positive{% elif total < 0 %}negative{% endif %}">{{ total|signed }}H</strong><small>{{ days|length }} dias con registro</small></article>
-  <article class="kpi"><span>PROMEDIO DIARIO</span><strong>{{ average|signed }}H</strong><small>Sobre dias capturados</small></article>
+  <article class="kpi hero-kpi"><span>BALANCE TOTAL</span><strong class="{% if total_mxn > 0 %}positive{% elif total_mxn < 0 %}negative{% endif %}">{{ total_mxn|money }}</strong><small>{{ total|signed }}H · {{ days|length }} dias</small></article>
+  <article class="kpi"><span>PROMEDIO DIARIO</span><strong>{{ average_mxn|money }}</strong><small>{{ average|signed }}H</small></article>
   <article class="kpi"><span>DISTRIBUCION</span><div class="triple"><b class="positive">{{ positive }}</b><b>{{ neutral }}</b><b class="negative">{{ negative }}</b></div><small>Positivos · neutros · negativos</small></article>
   <article class="kpi"><span>INTEGRIDAD</span><strong>{{ complete }} / {{ days|length }}</strong><small>Completos · {{ partial }} parciales</small></article>
 </section>
@@ -26,28 +26,27 @@
     {% for row in module_rows %}
       <article class="module-row">
         <div class="row-name"><span>0{{ forloop.counter }}</span><strong>{{ row.name }}</strong></div>
-        <div class="mini-bars" aria-label="Tendencia diaria">{% for point in row.series %}<i class="{% if point < 0 %}below{% endif %}" style="height:{% widthratio point|default:0 2 38 %}px"></i>{% empty %}<em>Sin datos</em>{% endfor %}</div>
-        <div class="row-stat"><strong class="{% if row.value > 0 %}positive{% elif row.value < 0 %}negative{% endif %}">{{ row.value|signed }}H</strong><small>{{ row.average|signed }}H/dia</small></div>
-        <div class="delta {% if row.change > 0 %}positive{% elif row.change < 0 %}negative{% endif %}">{{ row.change|signed }}H</div>
+        {% if row.is_record %}<div class="mini-bars"></div>{% else %}<div class="mini-bars" aria-label="Tendencia diaria">{% for point in row.series %}<i class="{% if point < 0 %}below{% endif %}" style="height:{% widthratio point|absnum 250 38 %}px"></i>{% empty %}<em>Sin datos</em>{% endfor %}</div>{% endif %}
+        {% if row.is_record %}<div class="row-stat"><strong class="record-only">REGISTRO</strong><small>Sin marginal</small></div><div class="delta">—</div>{% else %}<div class="row-stat"><strong class="{% if row.value_mxn > 0 %}positive{% elif row.value_mxn < 0 %}negative{% endif %}">{{ row.value_mxn|money }}</strong><small>{{ row.value|signed }}H · {{ row.average_mxn|money }}/dia</small></div><div class="delta {% if row.change_mxn > 0 %}positive{% elif row.change_mxn < 0 %}negative{% endif %}">{{ row.change_mxn|money }}</div>{% endif %}
       </article>
     {% endfor %}
-    <article class="module-row adjustment-row"><div class="row-name"><span>+</span><strong>Ajuste manual</strong></div><div class="mini-bars"><em>No atribuido</em></div><div class="row-stat"><strong>{{ adjustment_total|signed }}H</strong><small>Linea separada</small></div></article>
+    <article class="module-row adjustment-row"><div class="row-name"><span>+</span><strong>Ajuste manual</strong></div><div class="mini-bars"></div><div class="row-stat"><strong>{{ adjustment_total_mxn|money }}</strong><small>{{ adjustment_total|signed }}H</small></div></article>
   </div>
   <aside class="period-highlights">
     <div><p class="eyebrow">EXTREMOS</p><h2>Lecturas clave</h2></div>
-    <article><span>MEJOR DIA</span>{% if best %}<strong>{{ best.date|date:'D d M' }}</strong><b class="positive">{{ best.final_value_h|signed }}H</b>{% else %}<em>Sin datos</em>{% endif %}</article>
-    <article><span>PEOR DIA</span>{% if worst %}<strong>{{ worst.date|date:'D d M' }}</strong><b class="negative">{{ worst.final_value_h|signed }}H</b>{% else %}<em>Sin datos</em>{% endif %}</article>
+    <article><span>MEJOR DIA</span>{% if best %}<strong>{{ best.date|date:'D d M' }}</strong><b class="positive">{{ best.final_value_mxn|money }}</b><small>{{ best.final_value_h|signed }}H</small>{% else %}<em>Sin datos</em>{% endif %}</article>
+    <article><span>PEOR DIA</span>{% if worst %}<strong>{{ worst.date|date:'D d M' }}</strong><b class="negative">{{ worst.final_value_mxn|money }}</b><small>{{ worst.final_value_h|signed }}H</small>{% else %}<em>Sin datos</em>{% endif %}</article>
     <article><span>CAMBIOS DE CONFIGURACION</span><strong>{{ config_changes|length }}</strong><small>Los valores previos permanecen historicos</small>{% for change in config_changes %}<small class="config-marker">↳ {{ change.effective_from|date:'d M · H:i' }} · H ${{ change.hour_value_mxn }}</small>{% endfor %}</article>
   </aside>
 </section>
 
 <section class="behavior-section">
-  <div class="panel-head"><div><p class="eyebrow">COMPORTAMIENTOS REALES</p><h2>Lo que explica el balance</h2></div><span>Sin convertir todo a dinero</span></div>
+  <div class="panel-head"><div><p class="eyebrow">COMPORTAMIENTOS REALES</p><h2>Metricas del periodo</h2></div></div>
   <div class="behavior-grid">{% for group in behavior_groups %}<article><h3>{{ group.name }}</h3>{% for label, value, unit in group.metrics %}<div><span>{{ label }}</span><strong>{% if value == None %}—{% else %}{{ value|floatformat:1 }}{% endif %} <small>{{ unit }}</small></strong></div>{% endfor %}</article>{% endfor %}</div>
 </section>
 
 <section class="data-ledger">
   <div class="panel-head"><div><p class="eyebrow">SERIE TEMPORAL</p><h2>Dias del periodo</h2></div></div>
-  <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Estado</th><th>Automatico</th><th>Ajuste</th><th>Final</th><th>H historico</th></tr></thead><tbody>{% for day in days %}<tr><td><a href="{% url 'dashboard:day' day.date|date:'Y-m-d' %}">{{ day.date|date:'D d M' }}</a></td><td><span class="status-chip {{ day.status }}">{{ day.get_status_display }}</span></td><td>{{ day.automatic_value_h|signed }}H</td><td>{{ day.adjustment_h|signed }}H</td><td><strong>{{ day.final_value_h|signed }}H</strong></td><td>${{ day.configuration_snapshot.hour_value_mxn }}</td></tr>{% empty %}<tr><td colspan="6" class="empty">No hay dias capturados en este periodo.</td></tr>{% endfor %}</tbody></table></div>
+  <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Estado</th><th>Automatico</th><th>Ajuste</th><th>Final</th><th>Referencia H</th></tr></thead><tbody>{% for day in days %}<tr><td><a href="{% url 'dashboard:day' day.date|date:'Y-m-d' %}">{{ day.date|date:'D d M' }}</a></td><td><span class="status-chip {{ day.status }}">{{ day.get_status_display }}</span></td><td>{{ day.automatic_value_h|mul:day.configuration_snapshot.hour_value_mxn|money }}</td><td>{{ day.adjustment_mxn|money }}</td><td><strong>{{ day.final_value_mxn|money }}</strong></td><td>{{ day.final_value_h|signed }}H</td></tr>{% empty %}<tr><td colspan="6" class="empty">Sin registros.</td></tr>{% endfor %}</tbody></table></div>
 </section>
 {% endblock %}
