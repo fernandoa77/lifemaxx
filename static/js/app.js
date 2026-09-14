@@ -230,10 +230,12 @@
   document.querySelector('[data-open-supplement]')?.addEventListener('click', () => supplementDialog?.showModal());
   document.querySelector('[data-open-activity]')?.addEventListener('click', () => activityDialog?.showModal());
   document.querySelector('[data-open-body-photos]')?.addEventListener('click', () => document.getElementById('bodyPhotoDialog')?.showModal());
+  document.querySelectorAll('[data-open-meal-photo]').forEach((button) => button.addEventListener('click', () => document.getElementById(button.dataset.openMealPhoto)?.showModal()));
   if (mealDialog?.hasAttribute('data-open-on-load')) mealDialog.showModal();
   if (activityDialog?.hasAttribute('data-open-on-load')) activityDialog.showModal();
   document.querySelectorAll('[data-close-dialog]').forEach((button) => button.addEventListener('click', () => button.closest('dialog')?.close()));
   document.querySelectorAll('.entry-dialog').forEach((dialog) => dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); }));
+  document.querySelectorAll('.meal-photo-dialog').forEach((dialog) => dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); }));
 
   const activityCategory = activityDialog?.querySelector('[name="category"]');
   const activityAmount = activityDialog?.querySelector('[name="amount"]');
