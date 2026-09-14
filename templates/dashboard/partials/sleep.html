@@ -1,8 +1,12 @@
 {% if rising_blocked %}<div class="blocked-status">LEVANTAMIENTO · NO APLICA · SIN SUEÑO EL DÍA ANTERIOR</div>{% endif %}
-<div class="inline-data-list sleep-inline-list">
-  {% include 'dashboard/partials/inline_field.html' with field=form.rising_category %}
-  {% include 'dashboard/partials/inline_field.html' with field=form.no_sleep %}
-  <div data-sleep-times>{% include 'dashboard/partials/inline_field.html' with field=form.fell_asleep_at %}{% include 'dashboard/partials/inline_field.html' with field=form.woke_up_at %}</div>
-  {% include 'dashboard/partials/inline_field.html' with field=form.adjustment_minutes %}
-  {% include 'dashboard/partials/inline_field.html' with field=form.description %}
+<div class="sleep-specialized">
+  <section class="sleep-rising">{% include 'dashboard/partials/inline_field.html' with field=form.rising_category %}</section>
+  <section class="sleep-period">
+    <div class="sleep-period-head"><div><p class="eyebrow">SUEÑO PRINCIPAL</p><h3>Me dormí y desperté</h3></div><label class="sleep-switch-row" data-inline-field data-field="no_sleep" data-auto-inline>{{ form.no_sleep }}<span>No dormí</span><em data-inline-error></em></label></div>
+    <div class="sleep-time-grid" data-sleep-times>
+      <label class="time-inline-field" data-inline-field data-field="fell_asleep_at" data-auto-inline><span>Me dormí</span><div>{{ form.fell_asleep_at }}<button type="button" data-time-now title="Usar hora actual">◷</button></div><em data-inline-error></em></label>
+      <label class="time-inline-field" data-inline-field data-field="woke_up_at" data-auto-inline><span>Desperté</span><div>{{ form.woke_up_at }}<button type="button" data-time-now title="Usar hora actual">◷</button></div><em data-inline-error></em></label>
+    </div>
+  </section>
+  <div class="inline-data-list sleep-detail-list">{% include 'dashboard/partials/inline_field.html' with field=form.adjustment_minutes inline_class='compact-number-inline' %}{% include 'dashboard/partials/inline_field.html' with field=form.description %}</div>
 </div>

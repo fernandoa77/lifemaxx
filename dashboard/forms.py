@@ -123,15 +123,13 @@ class SleepForm(StyledModelForm):
             "description": "Descripcion personal",
         }
         widgets = {
-            "fell_asleep_at": forms.DateTimeInput(format="%Y-%m-%dT%H:%M", attrs={"type": "datetime-local"}),
-            "woke_up_at": forms.DateTimeInput(format="%Y-%m-%dT%H:%M", attrs={"type": "datetime-local"}),
+            "fell_asleep_at": forms.TimeInput(format="%H:%M", attrs={"type": "time"}),
+            "woke_up_at": forms.TimeInput(format="%H:%M", attrs={"type": "time"}),
             "description": forms.Textarea(attrs={"rows": 3}),
         }
 
     def __init__(self, *args, rising_blocked=False, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["fell_asleep_at"].input_formats = ["%Y-%m-%dT%H:%M"]
-        self.fields["woke_up_at"].input_formats = ["%Y-%m-%dT%H:%M"]
         self.order_fields([
             "rising_category", "no_sleep", "fell_asleep_at", "woke_up_at",
             "adjustment_minutes", "description",

@@ -397,10 +397,18 @@ def _inline_save(request, day, module):
     if module == "sleep" and field_name == "rising_category" and _rising_blocked(day):
         return JsonResponse({"ok": False, "error": "No aplica porque no dormiste el día anterior."}, status=422)
     model_field = model._meta.get_field(field_name)
-    form_field = model_field.formfield()
     raw = request.POST.get("value", "")
     try:
-        value = form_field.clean(raw)
+        if module == "sleep" and field_name in {"fell_asleep_at", "woke_up_at"}:
+            clock = dt.time.fromisoformat(raw) if raw else None
+            target_date = day.date
+            if field_name == "woke_up_at" and clock and instance.fell_asleep_at:
+                asleep_clock = timezone.localtime(instance.fell_asleep_at).time().replace(tzinfo=None)
+                if clock <= asleep_clock:
+                    target_date += dt.timedelta(days=1)
+            value = timezone.make_aware(dt.datetime.combine(target_date, clock), timezone.get_current_timezone()) if clock else None
+        else:
+            value = model_field.formfield().clean(raw)
     except Exception as exc:
         message = getattr(exc, "messages", ["Valor inválido."])[0]
         return JsonResponse({"ok": False, "error": message}, status=422)
@@ -417,6 +425,11 @@ def _inline_save(request, day, module):
         elif field_name in {"fell_asleep_at", "woke_up_at"} and value:
             instance.no_sleep = False
             update_fields.append("no_sleep")
+            if field_name == "fell_asleep_at" and instance.woke_up_at:
+                wake_clock = timezone.localtime(instance.woke_up_at).time().replace(tzinfo=None)
+                wake_date = day.date + (dt.timedelta(days=1) if wake_clock <= value.time().replace(tzinfo=None) else dt.timedelta())
+                instance.woke_up_at = timezone.make_aware(dt.datetime.combine(wake_date, wake_clock), timezone.get_current_timezone())
+                update_fields.append("woke_up_at")
     instance.save(update_fields=list(dict.fromkeys(update_fields)))
     if module != "nutrition":
         _mark_captured(day, module)
@@ -432,7 +445,9 @@ def _inline_save(request, day, module):
         if next_day:
             recalculate_day(next_day)
     display = dict(model_field.flatchoices).get(value, value) if model_field.choices else value
-    if isinstance(display, (dt.date, dt.datetime, dt.time)):
+    if isinstance(display, dt.datetime):
+        display = timezone.localtime(display).strftime("%H:%M")
+    elif isinstance(display, (dt.date, dt.time)):
         display = display.isoformat(timespec="minutes")
     return JsonResponse({"ok": True, "field": field_name, "value": raw, "display": "—" if display in (None, "") else str(display)})
 

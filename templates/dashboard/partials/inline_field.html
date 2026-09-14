@@ -1,4 +1,4 @@
-{% load dashboard_extras %}<div class="inline-field-row" data-inline-field data-field="{{ field.name }}">
+{% load dashboard_extras %}<div class="inline-field-row {{ inline_class }}" data-inline-field data-field="{{ field.name }}">
   <span class="inline-field-label">{{ label|default:field.label }}</span>
   <button class="inline-field-value" type="button" data-inline-display><strong data-inline-text>{{ field|field_display }}</strong><i>✎</i></button>
   <div class="inline-field-editor" data-inline-editor>{{ field }}<button class="inline-confirm" type="button" data-inline-confirm aria-label="Guardar">✓</button><button class="inline-cancel" type="button" data-inline-cancel aria-label="Cancelar">×</button></div>

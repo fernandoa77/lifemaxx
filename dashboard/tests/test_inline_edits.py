@@ -38,8 +38,11 @@ class InlineEditTests(TestCase):
         self.assertFalse(state.captured)
 
     def test_sleep_fields_save_independently_and_no_sleep_clears_times(self):
-        self.assertEqual(self.save("sleep", "fell_asleep_at", "2099-12-30T23:15").status_code, 200)
-        self.assertEqual(self.save("sleep", "woke_up_at", "2099-12-31T07:00").status_code, 200)
+        self.assertEqual(self.save("sleep", "fell_asleep_at", "23:00").status_code, 200)
+        self.assertEqual(self.save("sleep", "woke_up_at", "06:00").status_code, 200)
+        sleep = SleepEntry.objects.get(day=self.day)
+        self.assertEqual(sleep.total_sleep_minutes, 420)
+        self.assertEqual(sleep.woke_up_at.date(), self.date + dt.timedelta(days=1))
         response = self.save("sleep", "no_sleep", "true")
         sleep = SleepEntry.objects.get(day=self.day)
         self.assertEqual(response.status_code, 200)

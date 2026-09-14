@@ -1,3 +1,4 @@
+import datetime as dt
 from decimal import Decimal
 
 from django import template
@@ -13,6 +14,10 @@ def field_display(field):
         return "—"
     if getattr(field.field.widget, "input_type", "") == "checkbox":
         return "Sí" if value else "No"
+    if isinstance(value, dt.datetime):
+        return value.strftime("%H:%M")
+    if isinstance(value, dt.time):
+        return value.strftime("%H:%M")
     choices = list(getattr(field.field, "choices", ()) or ())
     for key, label in choices:
         if str(key) == str(value):

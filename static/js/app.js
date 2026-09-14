@@ -160,7 +160,8 @@
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.error || 'No se pudo guardar.');
       row.dataset.original = value;
-      row.querySelector('[data-inline-text]').textContent = data.display;
+      const text = row.querySelector('[data-inline-text]');
+      if (text) text.textContent = data.display;
       closeInline(row);
       setStatus('Guardado', 'saved');
       if (row.dataset.field === 'no_sleep') document.querySelector('[data-sleep-times]')?.toggleAttribute('hidden', input.checked);
@@ -172,6 +173,16 @@
   };
   inlineRows.forEach((row) => {
     const input = inlineInput(row);
+    if (row.hasAttribute('data-auto-inline')) {
+      row.dataset.original = input?.type === 'checkbox' ? String(input.checked) : input?.value || '';
+      input?.addEventListener('change', () => saveInline(row));
+      row.querySelector('[data-time-now]')?.addEventListener('click', () => {
+        const now = new Date();
+        input.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        saveInline(row);
+      });
+      return;
+    }
     const begin = () => {
       inlineRows.filter((item) => item !== row && item.classList.contains('editing')).forEach(saveInline);
       row.dataset.original = input?.type === 'checkbox' ? String(input.checked) : input?.value || '';
