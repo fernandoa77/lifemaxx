@@ -20,6 +20,14 @@ def _data_url(path):
     return f"data:{mime};base64,{encoded}"
 
 
+def _uploaded_data_url(uploaded):
+    mime = getattr(uploaded, "content_type", None) or mimetypes.guess_type(uploaded.name)[0] or "application/octet-stream"
+    uploaded.seek(0)
+    encoded = base64.b64encode(uploaded.read()).decode("ascii")
+    uploaded.seek(0)
+    return f"data:{mime};base64,{encoded}"
+
+
 def request_structured_json(
     *,
     system_prompt,
@@ -27,6 +35,7 @@ def request_structured_json(
     schema,
     schema_name,
     images=None,
+    image_files=None,
     image_urls=None,
     model=None,
     context=None,
@@ -54,6 +63,8 @@ def request_structured_json(
     content = [{"type": "text", "text": str(user_content or "Analiza la evidencia adjunta.")}]
     for image_path in images or []:
         content.append({"type": "image_url", "image_url": {"url": _data_url(image_path)}})
+    for image_file in image_files or []:
+        content.append({"type": "image_url", "image_url": {"url": _uploaded_data_url(image_file)}})
     for image_url in image_urls or []:
         content.append({"type": "image_url", "image_url": {"url": image_url}})
     payload = {

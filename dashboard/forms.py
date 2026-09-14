@@ -3,7 +3,7 @@ from decimal import Decimal
 from django import forms
 from django.utils import timezone
 
-from .models import Activity, BodyEntry, BodyPhoto, GlobalConfiguration, Meal, MentalEntry, SleepEntry, SocialEntry, Supplement
+from .models import Activity, BodyEntry, BodyPhoto, DayRecord, GlobalConfiguration, Meal, MentalEntry, SleepEntry, SocialEntry, Supplement
 
 
 class StyledModelForm(forms.ModelForm):
@@ -51,7 +51,7 @@ class BodyPhotoPackageForm(forms.Form):
 
 
 class MealForm(StyledModelForm):
-    process_with_ai = forms.BooleanField(required=False, initial=False, label="Analizar con IA al guardar")
+    foods_json = forms.CharField(required=False, widget=forms.HiddenInput)
 
     class Meta:
         model = Meal
@@ -68,6 +68,24 @@ class MealForm(StyledModelForm):
         }
         widgets = {"eaten_at": forms.TimeInput(attrs={"type": "time"}), "description": forms.Textarea(attrs={"rows": 3})}
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in ("calories", "protein_g", "carbs_g", "fat_g", "fiber_g", "beverage_volume_ml", "alcohol_abv_percent", "pure_alcohol_ml"):
+            self.fields[name].min_value = Decimal("0")
+        if not self.is_bound and not self.instance.pk:
+            self.fields["eaten_at"].initial = timezone.localtime().strftime("%H:%M")
+        if not self.is_bound and self.instance.pk:
+            import json
+            self.fields["foods_json"].initial = json.dumps(self.instance.foods, ensure_ascii=False)
+
+
+class NutritionNotesForm(StyledModelForm):
+    class Meta:
+        model = DayRecord
+        fields = ("nutrition_notes",)
+        labels = {"nutrition_notes": "Notas del dia"}
+        widgets = {"nutrition_notes": forms.Textarea(attrs={"rows": 3, "placeholder": "Notas generales de nutricion"})}
+
 
 class ActivityForm(StyledModelForm):
     class Meta:
@@ -83,6 +101,11 @@ class SupplementForm(StyledModelForm):
         fields = ("taken_at", "name", "dose", "unit", "notes")
         labels = {"taken_at": "Hora", "name": "Suplemento", "dose": "Dosis", "unit": "Unidad", "notes": "Notas"}
         widgets = {"taken_at": forms.TimeInput(attrs={"type": "time"}), "notes": forms.Textarea(attrs={"rows": 2})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound:
+            self.fields["taken_at"].initial = timezone.localtime().strftime("%H:%M")
 
 
 class SleepForm(StyledModelForm):

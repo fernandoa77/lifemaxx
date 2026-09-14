@@ -1,0 +1,53 @@
+<div class="nutrition-actions">
+  <button class="button" type="button" data-open-meal>Nueva comida</button>
+  <button class="button secondary" type="button" data-open-supplement>Agregar suplemento</button>
+</div>
+
+<div class="record-list nutrition-records">
+  <h3>Comidas registradas <span>{{ meals|length }}</span></h3>
+  {% for meal in meals %}
+    <article>
+      <div><strong>{{ meal.eaten_at|time:'H:i'|default:'Sin hora' }}</strong><p>{{ meal.description|default:'Registro manual' }}</p><small>{{ meal.calories|floatformat:0 }} kcal · {{ meal.protein_g|floatformat:1 }} g proteina · {{ meal.carbs_g|floatformat:1 }} g carbos · {{ meal.fat_g|floatformat:1 }} g grasa{% if meal.pure_alcohol_ml %} · {{ meal.pure_alcohol_ml|floatformat:1 }} ml alcohol{% endif %}</small></div>
+      <div class="record-actions"><a class="icon-button" href="?meal={{ meal.pk }}" aria-label="Editar comida">✎</a><form method="post">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="meal_id" value="{{ meal.pk }}"><button class="icon-button danger" aria-label="Eliminar comida">×</button></form></div>
+    </article>
+  {% empty %}<p class="empty">Todavia no hay comidas registradas.</p>{% endfor %}
+</div>
+
+<div class="subsection supplement-list">
+  <h3>Suplementos <span>{{ supplements|length }}</span></h3>
+  <div class="record-list slim">{% for supplement in supplements %}<article><div><strong>{{ supplement.name }}</strong><small>{{ supplement.dose }} {{ supplement.unit }}{% if supplement.taken_at %} · {{ supplement.taken_at|time:'H:i' }}{% endif %}{% if supplement.notes %} · {{ supplement.notes }}{% endif %}</small></div><form method="post">{% csrf_token %}<input type="hidden" name="action" value="supplement-delete"><input type="hidden" name="supplement_id" value="{{ supplement.pk }}"><button class="icon-button danger" aria-label="Eliminar suplemento">×</button></form></article>{% empty %}<p class="empty">Sin suplementos.</p>{% endfor %}</div>
+</div>
+
+<form method="post" data-autosave="true" class="nutrition-notes">{% csrf_token %}<input type="hidden" name="action" value="notes"><label class="field"><span>{{ nutrition_notes_form.nutrition_notes.label }}</span>{{ nutrition_notes_form.nutrition_notes }}</label></form>
+
+<dialog class="entry-dialog" id="mealDialog" {% if editing_meal %}data-open-on-load{% endif %}>
+  <div class="dialog-head"><div><p class="eyebrow">{% if editing_meal %}EDITAR{% else %}NUEVA{% endif %}</p><strong>Comida</strong></div><button type="button" data-close-dialog>×</button></div>
+  <form method="post" enctype="multipart/form-data" data-meal-form>{% csrf_token %}<input type="hidden" name="action" value="save">{% if editing_meal %}<input type="hidden" name="meal_id" value="{{ editing_meal.pk }}">{% endif %}{{ form.foods_json }}<input type="hidden" name="ai_generated" value="0" data-ai-generated>
+    {% if not editing_meal %}<div class="entry-mode-tabs"><button type="button" class="active" data-meal-mode="manual">Ingresar manualmente</button><button type="button" data-meal-mode="ai">Generar con IA</button></div>{% endif %}
+
+    <section class="ai-intake" data-ai-intake {% if not editing_meal %}hidden{% endif %}>
+      <label class="field"><span>Describe la comida</span><textarea class="control" rows="4" name="ai_description" placeholder="Ej. dos tacos de bistec con aguacate y una coca de 355 ml"></textarea></label>
+      <label class="meal-image-drop" data-meal-image-drop><input type="file" name="photo" accept="image/*" data-meal-photo><strong>Adjuntar o pegar imagen</strong><small data-meal-file>Seleccionar archivo · Ctrl + V</small></label>
+      <button class="button ai" type="button" data-generate-meal>✦ Generar vista previa</button><p class="ai-inline-status" data-ai-status></p>
+    </section>
+
+    <section class="meal-editor" data-meal-editor>
+      <p class="preview-label" data-preview-label {% if not editing_meal %}hidden{% endif %}>DATOS EDITABLES</p>
+      <div class="field-grid meal-primary-fields">
+        <label class="field"><span>{{ form.eaten_at.label }}</span>{{ form.eaten_at }}</label>
+        <label class="field wide-field"><span>{{ form.description.label }}</span>{{ form.description }}</label>
+      </div>
+      <div class="nutrition-macro-grid">
+        <label class="field"><span>{{ form.calories.label }}</span>{{ form.calories }}</label><label class="field"><span>{{ form.protein_g.label }}</span>{{ form.protein_g }}</label><label class="field"><span>{{ form.carbs_g.label }}</span>{{ form.carbs_g }}</label><label class="field"><span>{{ form.fat_g.label }}</span>{{ form.fat_g }}</label><label class="field"><span>{{ form.fiber_g.label }}</span>{{ form.fiber_g }}</label>
+      </div>
+      <details class="alcohol-fields"><summary>Datos de alcohol</summary><div class="field-grid"><label class="field"><span>{{ form.alcoholic_drink.label }}</span>{{ form.alcoholic_drink }}</label><label class="field"><span>{{ form.beverage_volume_ml.label }}</span>{{ form.beverage_volume_ml }}</label><label class="field"><span>{{ form.alcohol_abv_percent.label }}</span>{{ form.alcohol_abv_percent }}</label><label class="field"><span>{{ form.pure_alcohol_ml.label }}</span>{{ form.pure_alcohol_ml }}</label></div></details>
+      {% if form.errors %}<div class="form-error">Revisa los campos de la comida.</div>{% endif %}
+      <div class="form-actions"><button class="button" type="submit">{% if editing_meal %}Guardar cambios{% else %}Agregar comida{% endif %}</button>{% if editing_meal %}<a class="cancel-link" href="{% url 'dashboard:module' day.date|date:'Y-m-d' module %}">Cancelar</a>{% endif %}</div>
+    </section>
+  </form>
+</dialog>
+
+<dialog class="entry-dialog small-dialog" id="supplementDialog">
+  <div class="dialog-head"><div><p class="eyebrow">NUEVO</p><strong>Suplemento</strong></div><button type="button" data-close-dialog>×</button></div>
+  <form method="post" class="field-grid">{% csrf_token %}<input type="hidden" name="action" value="supplement">{% for field in supplement_form %}<label class="field"><span>{{ field.label }}</span>{{ field }}{% for error in field.errors %}<em>{{ error }}</em>{% endfor %}</label>{% endfor %}<div class="form-actions"><button class="button" type="submit">Agregar suplemento</button></div></form>
+</dialog>

@@ -103,6 +103,7 @@ class DayRecord(TimestampedModel):
     final_value_h = models.DecimalField(max_digits=12, decimal_places=4, default=Decimal("0"))
     status = models.CharField(max_length=12, choices=Status.choices, default=Status.PROGRESS)
     pending_reasons = models.JSONField(default=list)
+    nutrition_notes = models.TextField(blank=True)
     calculated_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:

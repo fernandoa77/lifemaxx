@@ -1,5 +1,6 @@
 import calendar as month_calendar
 import datetime as dt
+import json
 from decimal import Decimal
 
 from django.contrib import messages
@@ -14,7 +15,7 @@ from django.views.decorators.http import require_POST
 
 from .forms import (
     ActivityForm, AdjustmentForm, BodyAnalysisForm, BodyMeasurementsForm,
-    BodyPhotoPackageForm, ConfigurationForm, MealForm, MentalForm, SleepForm,
+    BodyPhotoPackageForm, ConfigurationForm, MealForm, MentalForm, NutritionNotesForm, SleepForm,
     SocialForm, SupplementForm,
 )
 from .models import Activity, BodyEntry, BodyPhoto, GlobalConfiguration, Meal, MentalEntry, SectionState, SleepEntry, SocialEntry, SourceSubmission, Supplement
@@ -131,6 +132,8 @@ def _module_render(request, day, module, bound_form=None):
     body, sleep, mental, social = _module_instances(day)
     rising_blocked = _rising_blocked(day)
     editing_meal = get_object_or_404(Meal, pk=request.GET["meal"], day=day) if module == "nutrition" and request.GET.get("meal") else None
+    if module == "nutrition" and isinstance(bound_form, MealForm) and bound_form.instance.pk:
+        editing_meal = bound_form.instance
     editing_activity = get_object_or_404(Activity, pk=request.GET["activity"], day=day) if module == "activity" and request.GET.get("activity") else None
     forms = {
         "body": bound_form if isinstance(bound_form, BodyMeasurementsForm) else BodyMeasurementsForm(instance=body),
@@ -155,8 +158,9 @@ def _module_render(request, day, module, bound_form=None):
         "body_analysis_form": bound_form if isinstance(bound_form, BodyAnalysisForm) else BodyAnalysisForm(instance=body),
         "photo_package_form": BodyPhotoPackageForm(),
         "has_body_analysis": bool(body.analysis_json or body.visual_fat_percent is not None or body.muscularity_rating is not None or body.face_rating is not None or body.body_rating is not None or body.llm_description),
-        "meals": day.meals.all(), "activities": day.activities.all(), "supplements": day.supplements.all(),
+        "meals": day.meals.order_by("eaten_at", "created_at"), "activities": day.activities.all(), "supplements": day.supplements.order_by("taken_at", "created_at"),
         "supplement_form": SupplementForm(), "editing_meal": editing_meal, "editing_activity": editing_activity,
+        "nutrition_notes_form": NutritionNotesForm(instance=day),
         "rising_blocked": rising_blocked,
         "submissions": day.source_submissions.filter(module=module),
     }
@@ -235,6 +239,14 @@ def _module_post(request, day, module):
         return _save_singleton(request, day, module, BodyEntry, BodyMeasurementsForm)
 
     if module == "nutrition":
+        if action == "meal-ai-preview":
+            return _preview_meal_ai(request, day)
+        if action == "notes":
+            form = NutritionNotesForm(request.POST, instance=day)
+            if not form.is_valid():
+                return _form_error(request, form, day, module)
+            form.save()
+            return _saved_response(request, day, module, "Notas guardadas")
         if action == "supplement":
             form = SupplementForm(request.POST)
             if not form.is_valid():
@@ -243,12 +255,9 @@ def _module_post(request, day, module):
             supplement = form.save(commit=False)
             supplement.day = day
             supplement.save()
-            _mark_captured(day, module)
-            recalculate_day(day)
             return _saved_response(request, day, module, "Suplemento agregado")
         if action == "supplement-delete":
             get_object_or_404(Supplement, pk=request.POST.get("supplement_id"), day=day).delete()
-            recalculate_day(day)
             return _saved_response(request, day, module, "Suplemento eliminado")
         if action == "delete":
             meal = get_object_or_404(Meal, pk=request.POST.get("meal_id"), day=day)
@@ -257,7 +266,7 @@ def _module_post(request, day, module):
             meal.delete()
             from .models import AuditRevision
             AuditRevision.objects.create(day=day, object_type="dashboard.Meal", object_id=meal_id, action="delete", previous_data=json_safe(previous), note="Comida eliminada")
-            _mark_captured(day, module)
+            SectionState.objects.filter(day=day, module=module).update(captured=day.meals.exists())
             recalculate_day(day)
             return _saved_response(request, day, module, "Comida eliminada")
         meal_id = request.POST.get("meal_id")
@@ -269,11 +278,19 @@ def _module_post(request, day, module):
         meal = form.save(commit=False)
         meal.day = day
         meal.corrected_manually = bool(instance)
+        try:
+            meal.foods = json.loads(form.cleaned_data.get("foods_json") or "[]")
+        except (TypeError, ValueError):
+            meal.foods = []
+        if request.POST.get("ai_generated") == "1":
+            meal.ai_result = {
+                "foods": meal.foods,
+                **{field: float(getattr(meal, field) or 0) for field in ("calories", "protein_g", "carbs_g", "fat_g", "fiber_g", "beverage_volume_ml", "alcohol_abv_percent", "pure_alcohol_ml")},
+                "alcoholic_drink": meal.alcoholic_drink,
+            }
         meal.save()
         record_revision(meal, previous, "Comida corregida" if instance else "Comida creada")
         _mark_captured(day, module)
-        if form.cleaned_data.get("process_with_ai"):
-            _process_meal_ai(day, meal)
         recalculate_day(day)
         return _saved_response(request, day, module, "Comida guardada")
 
@@ -305,33 +322,33 @@ def _module_post(request, day, module):
     return _save_singleton(request, day, module, model, form_class, **kwargs)
 
 
-def _process_meal_ai(day, meal):
+def _preview_meal_ai(request, day):
+    description = request.POST.get("ai_description", "").strip()
+    photo = request.FILES.get("photo")
+    if not description and not photo:
+        return JsonResponse({"ok": False, "error": "Describe la comida o adjunta una imagen."}, status=422)
     source = SourceSubmission.objects.create(
-        day=day, module="nutrition", source_text=meal.description,
-        source_file=meal.photo.name if meal.photo else "", status="processing", prompt_version="meal-1.0",
+        day=day, module="nutrition", source_text=description,
+        source_file=photo.name if photo else "", status="processing", prompt_version="meal-1.0",
     )
     SectionState.objects.filter(day=day, module="nutrition").update(processing_status="processing")
     try:
         result = request_structured_json(
             system_prompt="Identifica una comida y estima su desglose nutricional y alcohol puro.",
-            user_content=meal.description,
-            images=[meal.photo.path] if meal.photo else [], schema=MEAL_SCHEMA, schema_name="life_meal",
-            context={"date": day.date.isoformat(), "manual_values_are_context_only": True},
+            user_content=description,
+            image_files=[photo] if photo else [], schema=MEAL_SCHEMA, schema_name="life_meal",
+            context={"date": day.date.isoformat(), "purpose": "editable_preview"},
         )
         data = result["data"]
-        meal.foods = data["foods"]
-        for field in ("calories", "protein_g", "carbs_g", "fat_g", "fiber_g", "beverage_volume_ml", "alcohol_abv_percent", "pure_alcohol_ml"):
-            setattr(meal, field, Decimal(str(data[field])))
-        meal.alcoholic_drink = data["alcoholic_drink"]
-        meal.ai_result = data
-        meal.save()
         source.status, source.result_json, source.model_used = "processed", data, result["model"]
         source.save()
         SectionState.objects.filter(day=day, module="nutrition").update(processing_status="done", error_message="")
+        return JsonResponse({"ok": True, "preview": data, "model": result["model"]})
     except AIUnavailable as exc:
         source.status, source.error_message = "error", str(exc)
         source.save(update_fields=("status", "error_message", "updated_at"))
         SectionState.objects.filter(day=day, module="nutrition").update(processing_status="error", error_message=str(exc))
+        return JsonResponse({"ok": False, "error": str(exc)}, status=503)
 
 
 def _analyze_body(request, day):
