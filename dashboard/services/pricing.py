@@ -52,7 +52,7 @@ def get_or_create_day(date):
     config = configuration_for_date(date)
     day = DayRecord.objects.create(date=date, configuration_snapshot=config.snapshot())
     SectionState.objects.bulk_create([SectionState(day=day, module=key) for key in MODULE_KEYS])
-    return day
+    return recalculate_day(day)
 
 
 def record_revision(instance, previous, note=""):
@@ -183,7 +183,8 @@ def activity_value(day, h):
     base_kcal = _base_energy(day, weight)
     return q(value_h), {
         **{key: float(value) for key, value in sums.items()},
-        "gross_credit_h": float(q(gross_h)), "base_kcal": float(q(base_kcal, "0.01")),
+        "gross_credit_h": float(q(gross_h)), "inactivity_penalty_h": 0.20,
+        "base_kcal": float(q(base_kcal, "0.01")),
         "active_kcal": float(q(active_kcal, "0.01")), "total_kcal": float(q(base_kcal + active_kcal, "0.01")),
         "weight_used_kg": float(weight), "energy_version": "energy-1.0",
     }
@@ -383,7 +384,7 @@ def recalculate_day(day, *, save=True):
             "calorie_goal": day.configuration_snapshot.get("calorie_goal", 0),
             "protein_goal_g": day.configuration_snapshot.get("protein_goal_g", 0), "meal_count": 0,
         },
-        "activity": {key: 0 for key, _ in Activity.CATEGORIES} | {"active_kcal": 0, "base_kcal": 0, "total_kcal": 0, "gross_credit_h": 0},
+        "activity": {key: 0 for key, _ in Activity.CATEGORIES} | {"active_kcal": 0, "base_kcal": 0, "total_kcal": 0, "gross_credit_h": 0, "inactivity_penalty_h": 0.20},
         "sleep": {"total_minutes": 0, "deviation_minutes": None, "duration_h": 0, "regularity_h": 0, "rising_penalty_h": 0, "fell_asleep_at": None, "woke_up_at": None, "rising_category": None},
         "mental": {
             "minutes": {"pp": 0, "pi": 0, "pn": 0, "ai": 0, "ap": 0}, "resulting_streak": 0,
@@ -397,6 +398,12 @@ def recalculate_day(day, *, save=True):
     }
     relations = {"sleep": "sleep", "mental": "mental", "social": "social"}
     for key, calculator in calculators.items():
+        if key == "activity":
+            values[key], breakdowns[key] = calculator()
+            if not states[key].captured:
+                breakdowns[key]["not_captured"] = True
+                pending.append(f"Falta capturar {states[key].get_module_display().lower()}")
+            continue
         if not states[key].captured:
             values[key], breakdowns[key] = D("0"), {**empty_breakdowns[key], "not_captured": True}
             pending.append(f"Falta capturar {states[key].get_module_display().lower()}")
