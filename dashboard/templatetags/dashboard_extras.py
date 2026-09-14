@@ -1,0 +1,46 @@
+from decimal import Decimal
+
+from django import template
+
+
+register = template.Library()
+
+
+@register.filter
+def get_item(mapping, key):
+    return (mapping or {}).get(key)
+
+
+@register.filter
+def minutes_hm(value):
+    try:
+        minutes = int(value or 0)
+    except (TypeError, ValueError):
+        return "0 min"
+    hours, remainder = divmod(minutes, 60)
+    return f"{hours} h {remainder:02d} min" if hours else f"{remainder} min"
+
+
+@register.filter
+def signed(value, digits=2):
+    try:
+        number = Decimal(str(value or 0))
+        return f"{number:+.{int(digits)}f}"
+    except Exception:
+        return value
+
+
+@register.filter
+def pct(value, goal):
+    try:
+        return min(max(float(value or 0) / float(goal or 1) * 100, 0), 140)
+    except (TypeError, ValueError, ZeroDivisionError):
+        return 0
+
+
+@register.filter
+def mul(value, multiplier):
+    try:
+        return Decimal(str(value or 0)) * Decimal(str(multiplier))
+    except Exception:
+        return 0

@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load dashboard_extras %}
+{% block title %}Calendario · LifeMax{% endblock %}
+{% block nav_calendar %}active{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div><p class="eyebrow">HISTORIAL MENSUAL</p><h1>Calendario</h1><p>Balance, integridad y contexto en una sola cuadricula.</p></div>
+  <div class="month-switch"><a href="{% url 'dashboard:calendar' previous.year previous.month %}">←</a><strong>{{ month_name }} <span>{{ year }}</span></strong><a href="{% url 'dashboard:calendar' next.year next.month %}">→</a></div>
+</header>
+<section class="calendar-card">
+  <div class="week-labels"><span>LUN</span><span>MAR</span><span>MIE</span><span>JUE</span><span>VIE</span><span>SAB</span><span>DOM</span></div>
+  <div class="calendar-grid">
+  {% for week in weeks %}{% for cell in week %}
+    <a href="{% url 'dashboard:day' cell.date|date:'Y-m-d' %}" class="calendar-cell {% if not cell.in_month %}outside{% endif %} {% if cell.date == today %}today{% endif %} {% if cell.record.final_value_h > 0 %}positive-day{% elif cell.record.final_value_h < 0 %}negative-day{% elif cell.record %}neutral-day{% endif %}">
+      <span class="day-number">{{ cell.date.day }}</span>
+      {% if cell.record %}<strong>{{ cell.record.final_value_h|signed }}H</strong><small>${{ cell.record.final_value_mxn|floatformat:0 }}</small><i class="record-status {{ cell.record.status }}"></i>{% else %}<em>Sin datos</em>{% endif %}
+    </a>
+  {% endfor %}{% endfor %}
+  </div>
+  <div class="calendar-legend"><span><i class="positive-dot"></i>Positivo</span><span><i class="neutral-dot"></i>Neutral</span><span><i class="negative-dot"></i>Negativo</span><span><i class="pending-dot"></i>Incompleto</span></div>
+</section>
+{% endblock %}

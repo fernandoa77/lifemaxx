@@ -1,0 +1,53 @@
+{% load static dashboard_extras %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090b0f">
+  <title>{% block title %}LifeMax{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <div class="noise"></div>
+  <div class="shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="{% url 'dashboard:home' %}">
+        <span class="brand-mark">L<span>+</span></span>
+        <span><strong>LIFEMAX</strong><small>Personal operating system</small></span>
+      </a>
+      <nav class="nav">
+        <a href="{% url 'dashboard:day' today|date:'Y-m-d' %}" class="{% block nav_today %}{% endblock %}"><span class="nav-dot"></span>Hoy</a>
+        <a href="{% url 'dashboard:calendar_current' %}" class="{% block nav_calendar %}{% endblock %}"><span class="nav-dot"></span>Calendario</a>
+        <a href="{% url 'dashboard:dashboard' %}" class="{% block nav_dashboard %}{% endblock %}"><span class="nav-dot"></span>Dashboard</a>
+        <a href="{% url 'dashboard:settings' %}" class="{% block nav_settings %}{% endblock %}"><span class="nav-dot"></span>Configuracion</a>
+      </nav>
+      <a class="streak-card" href="{% url 'dashboard:module' today|date:'Y-m-d' 'mental' %}">
+        <span class="flame">◒</span>
+        <span><small>RACHA SIN ROMPER</small><strong>{{ global_streak }} dias</strong></span>
+        <span class="arrow">↗</span>
+      </a>
+      <div class="sidebar-foot"><span class="status-led"></span> Sistema operativo</div>
+    </aside>
+    <header class="mobile-bar">
+      <button type="button" id="menuToggle" aria-label="Abrir menu">☰</button>
+      <a href="{% url 'dashboard:home' %}">LIFEMAX</a>
+      <span>{{ global_streak }} ◒</span>
+    </header>
+    <main class="main">
+      {% if messages %}
+        <div class="messages">
+          {% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}
+        </div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  <script src="{% static 'js/app.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
