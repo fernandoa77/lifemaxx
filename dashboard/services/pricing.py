@@ -202,12 +202,20 @@ def _circular_median(values):
 
 def sleep_value(day, h):
     entry = day.sleep
+    rising_blocked = DayRecord.objects.filter(
+        date=day.date - dt.timedelta(days=1), sleep__no_sleep=True,
+    ).exists()
+    rise_penalty_h = D("0") if rising_blocked else {
+        "quick": D("0"), "medium": D("0.25"), "slow": D("0.50"), "na": D("0"),
+    }[entry.rising_category]
+    incomplete = False
     if entry.no_sleep:
         total, midpoint, reference, deviation = 0, None, None, None
         duration_h, regularity_h = D("-0.25"), D("0")
-        rise_penalty_h = D("0")
     elif not entry.fell_asleep_at or not entry.woke_up_at:
-        return D("0"), {"incomplete": True}
+        total, midpoint, reference, deviation = 0, None, None, None
+        duration_h, regularity_h = D("0"), D("0")
+        incomplete = True
     else:
         start, end = entry.fell_asleep_at, entry.woke_up_at
         if end <= start:
@@ -235,7 +243,6 @@ def sleep_value(day, h):
             regularity_h = D("-0.25")
         else:
             regularity_h = D("-0.50")
-        rise_penalty_h = {"quick": D("0"), "medium": D("0.25"), "slow": D("0.50"), "na": D("0")}[entry.rising_category]
     value_h = max(min(duration_h + regularity_h - rise_penalty_h, D("0.75")), D("-0.75"))
     entry.total_sleep_minutes = total
     entry.midpoint_minute = midpoint
@@ -248,7 +255,8 @@ def sleep_value(day, h):
         "regularity_h": float(regularity_h), "rising_penalty_h": float(rise_penalty_h),
         "fell_asleep_at": entry.fell_asleep_at.isoformat() if entry.fell_asleep_at else None,
         "woke_up_at": entry.woke_up_at.isoformat() if entry.woke_up_at else None,
-        "rising_category": entry.get_rising_category_display(),
+        "rising_category": "No aplica" if rising_blocked else entry.get_rising_category_display(),
+        "rising_blocked": rising_blocked, "incomplete": incomplete,
     }
 
 

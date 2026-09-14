@@ -119,15 +119,21 @@ def _module_instances(day):
     return body, sleep, mental, social
 
 
+def _rising_blocked(day):
+    previous_date = day.date - dt.timedelta(days=1)
+    return SleepEntry.objects.filter(day__date=previous_date, no_sleep=True).exists()
+
+
 def _module_render(request, day, module, bound_form=None):
     body, sleep, mental, social = _module_instances(day)
+    rising_blocked = _rising_blocked(day)
     editing_meal = get_object_or_404(Meal, pk=request.GET["meal"], day=day) if module == "nutrition" and request.GET.get("meal") else None
     editing_activity = get_object_or_404(Activity, pk=request.GET["activity"], day=day) if module == "activity" and request.GET.get("activity") else None
     forms = {
         "body": bound_form or BodyForm(instance=body),
         "nutrition": bound_form or MealForm(instance=editing_meal),
         "activity": bound_form or ActivityForm(instance=editing_activity),
-        "sleep": bound_form or SleepForm(instance=sleep),
+        "sleep": bound_form or SleepForm(instance=sleep, rising_blocked=rising_blocked),
         "mental": bound_form or MentalForm(instance=mental),
         "social": bound_form or SocialForm(instance=social),
     }
@@ -145,6 +151,7 @@ def _module_render(request, day, module, bound_form=None):
         "body": body, "photo_form": BodyPhotoForm(), "photos": body.photos.all(),
         "meals": day.meals.all(), "activities": day.activities.all(), "supplements": day.supplements.all(),
         "supplement_form": SupplementForm(), "editing_meal": editing_meal, "editing_activity": editing_activity,
+        "rising_blocked": rising_blocked,
         "submissions": day.source_submissions.filter(module=module),
     }
     return render(request, "dashboard/module.html", context)
@@ -154,10 +161,10 @@ def _mark_captured(day, module, processing_status="idle", error=""):
     SectionState.objects.filter(day=day, module=module).update(captured=True, processing_status=processing_status, error_message=error)
 
 
-def _save_singleton(request, day, module, model, form_class):
+def _save_singleton(request, day, module, model, form_class, **form_kwargs):
     instance, _ = model.objects.get_or_create(day=day)
     previous = model_to_dict(instance)
-    form = form_class(request.POST, request.FILES, instance=instance)
+    form = form_class(request.POST, request.FILES, instance=instance, **form_kwargs)
     if not form.is_valid():
         return _form_error(request, form, day, module)
     saved = form.save()
@@ -167,6 +174,11 @@ def _save_singleton(request, day, module, model, form_class):
         recalculate_mental_from(day.date)
     elif module == "social":
         recalculate_social_week(day.date)
+    elif module == "sleep":
+        recalculate_day(day)
+        next_day = day.__class__.objects.filter(date=day.date + dt.timedelta(days=1)).first()
+        if next_day:
+            recalculate_day(next_day)
     else:
         recalculate_day(day)
     return _saved_response(request, day, module)
@@ -265,7 +277,8 @@ def _module_post(request, day, module):
         "sleep": (SleepEntry, SleepForm), "mental": (MentalEntry, MentalForm), "social": (SocialEntry, SocialForm)
     }
     model, form_class = singleton[module]
-    return _save_singleton(request, day, module, model, form_class)
+    kwargs = {"rising_blocked": _rising_blocked(day)} if module == "sleep" else {}
+    return _save_singleton(request, day, module, model, form_class, **kwargs)
 
 
 def _process_meal_ai(day, meal):

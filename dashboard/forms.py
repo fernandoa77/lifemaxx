@@ -77,7 +77,7 @@ class SleepForm(StyledModelForm):
         fields = ("no_sleep", "fell_asleep_at", "woke_up_at", "adjustment_minutes", "rising_category", "description")
         labels = {
             "no_sleep": "No dormi", "fell_asleep_at": "Me dormi", "woke_up_at": "Desperte",
-            "adjustment_minutes": "Ajuste firmado (min)", "rising_category": "Tiempo para levantarme",
+            "adjustment_minutes": "Ajuste firmado (min)", "rising_category": "Tiempo para levantarme hoy",
             "description": "Descripcion personal",
         }
         widgets = {
@@ -86,15 +86,30 @@ class SleepForm(StyledModelForm):
             "description": forms.Textarea(attrs={"rows": 3}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, rising_blocked=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["fell_asleep_at"].input_formats = ["%Y-%m-%dT%H:%M"]
         self.fields["woke_up_at"].input_formats = ["%Y-%m-%dT%H:%M"]
+        self.order_fields([
+            "rising_category", "no_sleep", "fell_asleep_at", "woke_up_at",
+            "adjustment_minutes", "description",
+        ])
+        self.rising_blocked = rising_blocked
+        if rising_blocked:
+            self.initial["rising_category"] = "na"
+            self.fields["rising_category"].disabled = True
 
     def clean(self):
         data = super().clean()
-        if not data.get("no_sleep") and (not data.get("fell_asleep_at") or not data.get("woke_up_at")):
-            raise forms.ValidationError("Captura ambas horas o marca No dormi.")
+        if self.rising_blocked:
+            data["rising_category"] = "na"
+        start, end = data.get("fell_asleep_at"), data.get("woke_up_at")
+        if bool(start) != bool(end):
+            raise forms.ValidationError("Las horas de dormir y despertar se guardan juntas.")
+        if data.get("no_sleep"):
+            data["fell_asleep_at"] = None
+            data["woke_up_at"] = None
+            data["adjustment_minutes"] = 0
         return data
 
 
