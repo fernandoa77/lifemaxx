@@ -51,6 +51,19 @@ Cada foto se almacena en la base como URL y `file_id`. La imagen conserva el enc
 
 El `Procfile` ejecuta migraciones y `collectstatic` en release y sirve la aplicacion con Gunicorn. `DATABASE_URL` cambia automaticamente de SQLite local a PostgreSQL; WhiteNoise sirve los archivos estaticos. Los uploads viven en `MEDIA_ROOT`, por lo que en produccion deben conectarse a almacenamiento persistente.
 
+Configura estas variables en el panel del proveedor (Railway, Render, etc.):
+
+```env
+DEBUG=False
+ENVIRONMENT=production
+SECRET_KEY=una-clave-larga-y-aleatoria
+ALLOWED_HOSTS=tu-dominio-del-proveedor
+CSRF_TRUSTED_ORIGINS=https://tu-dominio-del-proveedor
+DATABASE_URL=postgresql://...
+```
+
+`ALLOWED_HOSTS` no lleva `https://`; `CSRF_TRUSTED_ORIGINS` sí. El proceso web escucha el puerto que el proveedor asigne mediante `PORT` y los errores 500 se registran en los logs de Gunicorn/Django sin exponer el traceback en el navegador.
+
 ## Reglas historicas
 
 - Cada `DayRecord` guarda su copia de `H`, metas, prioridades, perfil corporal y versiones de formulas.

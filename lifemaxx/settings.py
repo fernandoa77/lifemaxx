@@ -13,6 +13,7 @@ ENVIRONMENT = config("ENVIRONMENT", default="development").lower()
 IS_PRODUCTION = ENVIRONMENT == "production" or not DEBUG
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
 CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="", cast=Csv())
+# Los PaaS terminan TLS en su proxy y envian este encabezado hacia Gunicorn.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=IS_PRODUCTION, cast=bool)
 SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=IS_PRODUCTION, cast=bool)
@@ -100,3 +101,26 @@ OPENROUTER_RETRIES = config("OPENROUTER_RETRIES", default=2, cast=int)
 IMAGEKIT_PRIVATE_KEY = config("IMAGEKIT_PRIVATE_KEY", default="")
 IMAGEKIT_URL_ENDPOINT = config("IMAGEKIT_URL_ENDPOINT", default="").rstrip("/")
 IMAGEKIT_FOLDER = "/" + config("IMAGEKIT_FOLDER", default="/lifemaxx/body").strip("/")
+
+# Con DEBUG=False Django no muestra el traceback al navegador. En cambio queda en
+# los logs del proceso (Railway/Render/Heroku), donde se puede diagnosticar sin
+# exponer detalles internos a usuarios.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+    },
+    "loggers": {
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "django.server": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+    },
+}
