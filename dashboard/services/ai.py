@@ -51,7 +51,7 @@ def request_structured_json(
         raise AIUnavailable("OpenRouter no esta configurado. Agrega OPENROUTER_API_KEY y OPENROUTER_MODEL.")
 
     system = (
-        "Eres el motor de extraccion estructurada de LifeMax. "
+        "Eres el motor de extraccion estructurada de LifeMaxx. "
         "Conserva la incertidumbre: no inventes alimentos, cantidades ni mediciones. "
         "Tu respuesta DEBE ser unicamente un objeto JSON valido que cumpla exactamente "
         "el JSON Schema recibido: sin markdown, explicaciones ni propiedades extra. "

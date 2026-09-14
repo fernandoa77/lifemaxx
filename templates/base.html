@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090b0f">
-  <title>{% block title %}LifeMax{% endblock %}</title>
+  <title>{% block title %}LifeMaxx{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -18,7 +18,7 @@
     <aside class="sidebar" id="sidebar">
       <a class="brand" href="{% url 'dashboard:home' %}">
         <span class="brand-mark">L<span>+</span></span>
-        <span><strong>LIFEMAX</strong></span>
+        <span><strong>LIFEMAXX</strong></span>
       </a>
       <nav class="nav">
         <a href="{% url 'dashboard:day' today|date:'Y-m-d' %}" class="{% block nav_today %}{% endblock %}"><span class="nav-dot"></span>Hoy</a>
@@ -35,7 +35,7 @@
     </aside>
     <header class="mobile-bar">
       <button type="button" id="menuToggle" aria-label="Abrir menu">☰</button>
-      <a href="{% url 'dashboard:home' %}">LIFEMAX</a>
+      <a href="{% url 'dashboard:home' %}">LIFEMAXX</a>
       <span>{{ global_streak }} ◒</span>
     </header>
     <main class="main">

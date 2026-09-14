@@ -1,4 +1,4 @@
-# LifeMax
+# LifeMaxx
 
 Life Dashboard personal en Django. El MVP implementa captura diaria, pricing marginal en unidades de `H`, historial inmutable de configuracion, calendario, analisis por periodo y procesamiento estructurado mediante OpenRouter.
 
@@ -32,14 +32,14 @@ El paquete estandarizado de cinco tomas se sube con el mismo SDK de Jacob Web (`
 ```env
 IMAGEKIT_PRIVATE_KEY=private_xxx
 IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/tu_id
-IMAGEKIT_FOLDER=/lifemax/body
+IMAGEKIT_FOLDER=/lifemaxx/body
 ```
 
-Cada foto se almacena en la base como URL y `file_id`. La imagen conserva el encuadre completo, normaliza la orientacion EXIF y se convierte a WebP con un maximo de 1800 px. ImageKit crea la ruta configurada al recibir la primera subida; tambien puedes crear manualmente la carpeta `/lifemax/body` desde el Media Library.
+Cada foto se almacena en la base como URL y `file_id`. La imagen conserva el encuadre completo, normaliza la orientacion EXIF y se convierte a WebP con un maximo de 1800 px. ImageKit crea la ruta configurada al recibir la primera subida; tambien puedes crear manualmente la carpeta `/lifemaxx/body` desde el Media Library.
 
 ## Estructura
 
-- `lifemax/`: settings, URLs y entradas WSGI/ASGI siguiendo el patron de Studio Green.
+- `lifemaxx/`: settings, URLs y entradas WSGI/ASGI siguiendo el patron de Studio Green.
 - `dashboard/models.py`: configuracion versionada, fotografia diaria, seis modulos, evidencia, fuentes IA y auditoria.
 - `dashboard/services/pricing.py`: formulas deterministas y recalculo historico con snapshot original.
 - `dashboard/services/ai.py`: cliente transversal de OpenRouter y schemas estructurados.

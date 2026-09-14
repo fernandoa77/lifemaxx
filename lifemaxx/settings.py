@@ -7,7 +7,7 @@ from decouple import Csv, config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = config("SECRET_KEY", default="django-insecure-lifemax-change-me")
+SECRET_KEY = config("SECRET_KEY", default="django-insecure-lifemaxx-change-me")
 DEBUG = config("DEBUG", default=True, cast=bool)
 ENVIRONMENT = config("ENVIRONMENT", default="development").lower()
 IS_PRODUCTION = ENVIRONMENT == "production" or not DEBUG
@@ -43,7 +43,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "lifemax.urls"
+ROOT_URLCONF = "lifemaxx.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -59,8 +59,8 @@ TEMPLATES = [
         },
     }
 ]
-WSGI_APPLICATION = "lifemax.wsgi.application"
-ASGI_APPLICATION = "lifemax.asgi.application"
+WSGI_APPLICATION = "lifemaxx.wsgi.application"
+ASGI_APPLICATION = "lifemaxx.asgi.application"
 
 _sqlite_url = f"sqlite:///{(BASE_DIR / 'db.sqlite3').as_posix()}"
 _database_url = config("DATABASE_URL", default=_sqlite_url) or _sqlite_url
@@ -92,11 +92,11 @@ OPENROUTER_BASE_URL = config("OPENROUTER_BASE_URL", default="https://openrouter.
 OPENROUTER_MODEL = config("OPENROUTER_MODEL", default="")
 OPENROUTER_FALLBACK_MODELS = config("OPENROUTER_FALLBACK_MODELS", default="", cast=Csv())
 OPENROUTER_HTTP_REFERER = config("OPENROUTER_HTTP_REFERER", default="")
-OPENROUTER_APP_TITLE = config("OPENROUTER_APP_TITLE", default="LifeMax")
+OPENROUTER_APP_TITLE = config("OPENROUTER_APP_TITLE", default="LifeMaxx")
 OPENROUTER_TIMEOUT = config("OPENROUTER_TIMEOUT", default=90, cast=int)
 OPENROUTER_RETRIES = config("OPENROUTER_RETRIES", default=2, cast=int)
 
 # ImageKit: almacenamiento de evidencia fotografica corporal.
 IMAGEKIT_PRIVATE_KEY = config("IMAGEKIT_PRIVATE_KEY", default="")
 IMAGEKIT_URL_ENDPOINT = config("IMAGEKIT_URL_ENDPOINT", default="").rstrip("/")
-IMAGEKIT_FOLDER = "/" + config("IMAGEKIT_FOLDER", default="/lifemax/body").strip("/")
+IMAGEKIT_FOLDER = "/" + config("IMAGEKIT_FOLDER", default="/lifemaxx/body").strip("/")

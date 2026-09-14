@@ -58,7 +58,7 @@ def upload_body_photo(file, *, date, kind) -> UploadedImage:
             file_name=filename,
             folder=settings.IMAGEKIT_FOLDER,
             use_unique_file_name=False,
-            tags=["lifemax", "body", kind, date.isoformat()],
+            tags=["lifemaxx", "body", kind, date.isoformat()],
             timeout=30,
         )
         url = response.url
