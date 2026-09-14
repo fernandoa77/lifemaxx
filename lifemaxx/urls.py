@@ -3,8 +3,12 @@ from django.contrib import admin
 from django.urls import include, path, re_path
 from django.views.static import serve
 
+from . import pwa
+
 
 urlpatterns = [
+    path("manifest.webmanifest", pwa.manifest, name="pwa_manifest"),
+    path("sw.js", pwa.service_worker, name="pwa_service_worker"),
     path("admin/", admin.site.urls),
     path("", include("dashboard.urls", namespace="dashboard")),
 ]

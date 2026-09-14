@@ -82,7 +82,6 @@ def request_structured_json(
             "require_parameters": True,
             "data_collection": "deny",
         },
-        "temperature": 0,
     }
     fallbacks = list(settings.OPENROUTER_FALLBACK_MODELS)
     if fallbacks:
