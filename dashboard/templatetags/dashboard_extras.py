@@ -7,6 +7,20 @@ register = template.Library()
 
 
 @register.filter
+def field_display(field):
+    value = field.value()
+    if value in (None, ""):
+        return "—"
+    if getattr(field.field.widget, "input_type", "") == "checkbox":
+        return "Sí" if value else "No"
+    choices = list(getattr(field.field, "choices", ()) or ())
+    for key, label in choices:
+        if str(key) == str(value):
+            return label
+    return value
+
+
+@register.filter
 def get_item(mapping, key):
     return (mapping or {}).get(key)
 

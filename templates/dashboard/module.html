@@ -19,6 +19,7 @@
 
 <div class="module-layout module-{{ module }} {% if module == 'body' %}body-layout{% endif %}">
   <section class="capture-panel">
+    <input type="hidden" data-page-csrf value="{{ csrf_token }}">
     <div class="panel-head"><div><p class="eyebrow">CAPTURA</p><h2>Datos del dia</h2></div><span class="save-indicator" data-save-indicator><i></i> Listo</span></div>
 
     {% if before_challenge %}
@@ -26,21 +27,17 @@
     {% elif module == 'body' %}
       <section class="body-section">
         <div class="body-section-head"><p class="eyebrow">MEDICIONES MANUALES</p><h3>Peso y panza</h3></div>
-        <form method="post" data-autosave="true" class="inline-value-grid">{% csrf_token %}<input type="hidden" name="action" value="save-measurements">
-          {% for field in form %}{% with trend=body_rolling|get_item:field.name %}<div class="inline-edit" data-inline-edit><span>{{ field.label }}</span><button type="button" class="inline-display">{% if field.value != None and field.value != '' %}{{ field.value }}{% else %}—{% endif %}</button><div class="inline-control">{{ field }}</div><small class="rolling-reference">Promedio móvil 7 registros · {% if trend.average != None %}{{ trend.average|floatformat:2 }}{% else %}—{% endif %}</small>{% for error in field.errors %}<em>{{ error }}</em>{% endfor %}</div>{% endwith %}{% endfor %}
-        </form>
+        <div class="inline-data-list">{% for field in form %}{% with trend=body_rolling|get_item:field.name %}{% include 'dashboard/partials/inline_field.html' with field=field counterpart=trend.average %}{% endwith %}{% endfor %}</div>
       </section>
 
       <section class="body-section photo-package-section">
-        <div class="body-photo-launch"><div class="body-section-head"><p class="eyebrow">EVIDENCIA PARA IA</p><h3>Fotos estandarizadas <span>{{ photos|length }}/5</span></h3></div><div class="body-photo-actions"><button class="button secondary" type="button" data-open-body-photos>{% if photos %}Actualizar fotos{% else %}Agregar fotos{% endif %}</button>{% if photos %}<button class="button ghost" type="button" data-open-gallery>Ver fotos</button>{% endif %}{% if photos|length == 5 and not has_body_analysis %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="analyze"><button class="button ai" type="submit">✦ Analizar nuevamente</button></form>{% endif %}</div></div>
-        <dialog class="entry-dialog body-photo-dialog" id="bodyPhotoDialog"><div class="dialog-head"><div><p class="eyebrow">PAQUETE COMPLETO</p><strong>Fotos estandarizadas</strong></div><button type="button" data-close-dialog>×</button></div><form method="post" enctype="multipart/form-data" class="photo-package-form">{% csrf_token %}<input type="hidden" name="action" value="photo-package"><div class="photo-package-grid">{% for field in photo_package_form %}<label class="photo-slot"><span>0{{ forloop.counter }}</span><strong>{{ field.label }}</strong>{{ field }}<small data-file-name>Seleccionar</small>{% for error in field.errors %}<em>{{ error }}</em>{% endfor %}</label>{% endfor %}</div><button class="button ai" type="submit">✦ Guardar y analizar con IA</button></form></dialog>
+        <div class="body-photo-launch"><div class="body-section-head"><p class="eyebrow">EVIDENCIA PARA IA</p><h3>Fotos estandarizadas <span>{{ photos|length }}/5</span></h3></div><div class="body-photo-actions"><button class="button secondary" type="button" data-open-body-photos>{% if photos %}Actualizar fotos{% else %}Agregar fotos{% endif %}</button>{% if photos %}<button class="button ghost" type="button" data-open-gallery>Ver fotos</button>{% endif %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="analyze"><button class="button ai" type="submit" data-analyze-body {% if photos|length != 5 %}disabled{% endif %}>✦ Analizar con IA</button></form></div></div>
+        <dialog class="entry-dialog body-photo-dialog" id="bodyPhotoDialog"><div class="dialog-head"><div><p class="eyebrow">GUARDADO INDIVIDUAL</p><strong>Fotos estandarizadas</strong></div><button type="button" data-close-dialog>×</button></div><div class="photo-package-grid">{% for kind,label in body_photo_types %}<form method="post" enctype="multipart/form-data" class="single-photo-form" data-body-photo-form><input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"><input type="hidden" name="action" value="photo-single"><input type="hidden" name="kind" value="{{ kind }}"><label class="photo-slot"><span>0{{ forloop.counter }}</span><strong>{{ label }}</strong><input class="photo-package-input" type="file" name="photo" accept="image/*"><small data-file-name>{% if kind in uploaded_photo_kinds %}Guardada{% else %}Seleccionar{% endif %}</small></label></form>{% endfor %}</div><p class="photo-upload-status" data-photo-upload-status>Cada foto se guarda al seleccionarla.</p></dialog>
       </section>
 
       <section class="body-section analysis-section">
         <div class="body-section-head"><p class="eyebrow">{% if has_body_analysis %}RESULTADO IA · EDITABLE{% else %}RESULTADO IA{% endif %}</p><h3>Análisis corporal</h3></div>
-        {% if has_body_analysis %}<form method="post" data-autosave="true" class="inline-value-grid analysis-grid">{% csrf_token %}<input type="hidden" name="action" value="save-analysis">
-          {% for field in body_analysis_form %}{% with trend=body_rolling|get_item:field.name %}<div class="inline-edit {% if field.name == 'llm_description' %}wide{% endif %}" data-inline-edit><span>{{ field.label }}</span><button type="button" class="inline-display">{% if field.value != None and field.value != '' %}{{ field.value }}{% else %}—{% endif %}</button><div class="inline-control">{{ field }}</div>{% if field.name != 'llm_description' %}<small class="rolling-reference">Promedio móvil 7 registros · {% if trend.average != None %}{{ trend.average|floatformat:2 }}{% else %}—{% endif %}</small>{% endif %}{% for error in field.errors %}<em>{{ error }}</em>{% endfor %}</div>{% endwith %}{% endfor %}
-        </form>{% else %}<div class="analysis-pending-grid">{% for field in body_analysis_form %}<div class="analysis-pending {% if field.name == 'llm_description' %}wide{% endif %}"><span>{{ field.label }}</span><strong>PENDIENTE</strong></div>{% endfor %}</div>{% endif %}
+        {% if has_body_analysis %}<div class="inline-data-list">{% for field in body_analysis_form %}{% include 'dashboard/partials/inline_field.html' with field=field %}{% endfor %}</div>{% else %}<div class="analysis-pending-grid">{% for field in body_analysis_form %}<div class="analysis-pending {% if field.name == 'llm_description' %}wide{% endif %}"><span>{{ field.label }}</span><strong>PENDIENTE</strong></div>{% endfor %}</div>{% endif %}
       </section>
 
       {% if photos %}<dialog class="photo-dialog" id="bodyPhotoGallery"><div class="dialog-head"><strong>Fotos estandarizadas</strong><button type="button" data-close-gallery>×</button></div><div class="dialog-grid">{% for photo in photos %}<figure><img src="{{ photo.image_url }}" alt="{{ photo.get_kind_display }}"><figcaption>{{ photo.get_kind_display }}</figcaption></figure>{% endfor %}</div></dialog>{% endif %}
@@ -52,13 +49,16 @@
       {% include 'dashboard/partials/sleep.html' %}
     {% elif module == 'mental' %}
       {% include 'dashboard/partials/mental.html' %}
+    {% elif module == 'social' %}
+      {% include 'dashboard/partials/social.html' %}
     {% else %}
       <form method="post" data-autosave="true" class="field-grid">{% csrf_token %}<input type="hidden" name="action" value="save">{% include 'dashboard/partials/form_fields.html' %}<div class="form-actions"><button class="button" type="submit">Guardar ahora</button></div></form>
     {% endif %}
   </section>
 
-  {% if module != 'body' and not before_challenge %}<aside class="calculation-panel">
+  {% if module == 'nutrition' or module == 'activity' %}{% if not before_challenge %}<aside class="calculation-panel">
     <div class="sticky-summary">
+      <button class="breakdown-toggle" type="button" data-breakdown-toggle>Ver desglose</button>
       <p class="eyebrow">CALCULO · {{ day.configuration_snapshot.pricing_versions|get_item:module }}</p><h2>Desglose</h2>
       {% if breakdown.not_captured or breakdown.incomplete %}<div class="pending-box">Captura pendiente</div>{% endif %}
       <dl class="breakdown-list">
@@ -77,6 +77,6 @@
       <div class="formula-total"><span>VALOR DEL MODULO</span><div><strong>{{ module_value_mxn|money }}</strong><small>{{ module_value|signed }}H</small></div></div>
       {% if submissions %}<div class="process-log"><h3>Procesamiento IA</h3>{% for item in submissions %}<div><span class="process-dot {{ item.status }}"></span><p><strong>{{ item.get_status_display }}</strong><small>{{ item.model_used|default:item.error_message|default:'Fuente preservada' }}</small></p></div>{% endfor %}</div>{% endif %}
     </div>
-  </aside>{% endif %}
+  </aside>{% endif %}{% endif %}
 </div>
 {% endblock %}

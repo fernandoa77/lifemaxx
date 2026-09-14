@@ -50,6 +50,11 @@ class BodyPhotoPackageForm(forms.Form):
             field.widget.attrs.update({"class": "photo-package-input", "accept": "image/*", "data-photo-kind": name})
 
 
+class BodySinglePhotoForm(forms.Form):
+    kind = forms.ChoiceField(choices=BodyPhoto.TYPES)
+    photo = forms.ImageField()
+
+
 class MealForm(StyledModelForm):
     foods_json = forms.CharField(required=False, widget=forms.HiddenInput)
 

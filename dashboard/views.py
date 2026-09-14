@@ -15,7 +15,7 @@ from django.views.decorators.http import require_POST
 
 from .forms import (
     ActivityForm, AdjustmentForm, BodyAnalysisForm, BodyMeasurementsForm,
-    BodyPhotoPackageForm, ConfigurationForm, MealForm, MentalForm, NutritionNotesForm, SleepForm,
+    BodyPhotoPackageForm, BodySinglePhotoForm, ConfigurationForm, MealForm, MentalForm, NutritionNotesForm, SleepForm,
     SocialForm, SupplementForm,
 )
 from .models import Activity, BodyEntry, BodyPhoto, DayRecord, GlobalConfiguration, Meal, MentalEntry, SectionState, SleepEntry, SocialEntry, SourceSubmission, Supplement
@@ -201,6 +201,7 @@ def _module_render(request, day, module, bound_form=None):
         "previous_module": previous_module, "previous_module_meta": MODULE_META[previous_module],
         "next_module": next_module, "next_module_meta": MODULE_META[next_module],
         "body": body, "photos": body.photos.all(),
+        "body_photo_types": BodyPhoto.TYPES, "uploaded_photo_kinds": set(body.photos.values_list("kind", flat=True)),
         "body_analysis_form": bound_form if isinstance(bound_form, BodyAnalysisForm) else BodyAnalysisForm(instance=body),
         "photo_package_form": BodyPhotoPackageForm(),
         "has_body_analysis": bool(body.analysis_json or body.visual_fat_percent is not None or body.muscularity_rating is not None or body.face_rating is not None or body.body_rating is not None or body.llm_description),
@@ -243,7 +244,11 @@ def _save_singleton(request, day, module, model, form_class, **form_kwargs):
 
 def _module_post(request, day, module):
     action = request.POST.get("action", "save")
+    if action == "inline-save":
+        return _inline_save(request, day, module)
     if module == "body":
+        if action == "photo-single":
+            return _save_body_photo(request, day)
         if action == "photo-delete":
             photo = get_object_or_404(BodyPhoto, pk=request.POST.get("photo_id"), body__day=day)
             file_id = photo.image_file_id
@@ -371,6 +376,85 @@ def _module_post(request, day, module):
     model, form_class = singleton[module]
     kwargs = {"rising_blocked": _rising_blocked(day)} if module == "sleep" else {}
     return _save_singleton(request, day, module, model, form_class, **kwargs)
+
+
+INLINE_FIELDS = {
+    "body": (BodyEntry, {"weight_am_kg", "weight_pm_kg", "abdomen_cm", "visual_fat_percent", "muscularity_rating", "face_rating", "body_rating", "llm_description"}),
+    "nutrition": (DayRecord, {"nutrition_notes"}),
+    "sleep": (SleepEntry, {"rising_category", "no_sleep", "fell_asleep_at", "woke_up_at", "adjustment_minutes", "description"}),
+    "mental": (MentalEntry, set(MentalForm.Meta.fields)),
+    "social": (SocialEntry, {"family_minutes", "friends_minutes", "mixed_friends_minutes", "mixed_target_minutes", "target_friends_minutes", "journal"}),
+}
+
+
+def _inline_save(request, day, module):
+    config = INLINE_FIELDS.get(module)
+    field_name = request.POST.get("field", "")
+    if not config or field_name not in config[1]:
+        return JsonResponse({"ok": False, "error": "Campo no editable."}, status=422)
+    model = config[0]
+    instance = day if model is DayRecord else model.objects.get_or_create(day=day)[0]
+    if module == "sleep" and field_name == "rising_category" and _rising_blocked(day):
+        return JsonResponse({"ok": False, "error": "No aplica porque no dormiste el día anterior."}, status=422)
+    model_field = model._meta.get_field(field_name)
+    form_field = model_field.formfield()
+    raw = request.POST.get("value", "")
+    try:
+        value = form_field.clean(raw)
+    except Exception as exc:
+        message = getattr(exc, "messages", ["Valor inválido."])[0]
+        return JsonResponse({"ok": False, "error": message}, status=422)
+    if module == "mental" and field_name.endswith("_minutes") and value is not None and value > 999:
+        return JsonResponse({"ok": False, "error": "Usa un máximo de tres cifras."}, status=422)
+    previous = model_to_dict(instance)
+    setattr(instance, field_name, value)
+    update_fields = [field_name, "updated_at"]
+    if module == "sleep":
+        if field_name == "no_sleep" and value:
+            instance.fell_asleep_at = instance.woke_up_at = None
+            instance.adjustment_minutes = 0
+            update_fields += ["fell_asleep_at", "woke_up_at", "adjustment_minutes"]
+        elif field_name in {"fell_asleep_at", "woke_up_at"} and value:
+            instance.no_sleep = False
+            update_fields.append("no_sleep")
+    instance.save(update_fields=list(dict.fromkeys(update_fields)))
+    if module != "nutrition":
+        _mark_captured(day, module)
+    record_revision(instance, previous, f"Edición inline · {field_name}")
+    if module == "mental":
+        recalculate_mental_from(day.date)
+    elif module == "social":
+        recalculate_social_week(day.date)
+    else:
+        recalculate_day(day)
+    if module == "sleep":
+        next_day = DayRecord.objects.filter(date=day.date + dt.timedelta(days=1)).first()
+        if next_day:
+            recalculate_day(next_day)
+    display = dict(model_field.flatchoices).get(value, value) if model_field.choices else value
+    if isinstance(display, (dt.date, dt.datetime, dt.time)):
+        display = display.isoformat(timespec="minutes")
+    return JsonResponse({"ok": True, "field": field_name, "value": raw, "display": "—" if display in (None, "") else str(display)})
+
+
+def _save_body_photo(request, day):
+    form = BodySinglePhotoForm(request.POST, request.FILES)
+    if not form.is_valid():
+        return JsonResponse({"ok": False, "error": "Selecciona una imagen válida."}, status=422)
+    body, _ = BodyEntry.objects.get_or_create(day=day)
+    kind = form.cleaned_data["kind"]
+    previous = body.photos.filter(kind=kind).first()
+    try:
+        uploaded = upload_body_photo(form.cleaned_data["photo"], date=day.date, kind=kind)
+    except ImageKitError as exc:
+        return JsonResponse({"ok": False, "error": str(exc)}, status=503)
+    BodyPhoto.objects.update_or_create(body=body, kind=kind, defaults={"image_url": uploaded.url, "image_file_id": uploaded.file_id, "captured_at": timezone.now()})
+    if previous and previous.image_file_id != uploaded.file_id:
+        delete_photo(previous.image_file_id)
+    BodyEntry.objects.filter(pk=body.pk).update(visual_fat_percent=None, muscularity_rating=None, face_rating=None, body_rating=None, llm_description="", analysis_json={})
+    _mark_captured(day, "body", "idle")
+    recalculate_day(day)
+    return JsonResponse({"ok": True, "kind": kind, "url": uploaded.url, "count": body.photos.count()})
 
 
 def _preview_meal_ai(request, day):

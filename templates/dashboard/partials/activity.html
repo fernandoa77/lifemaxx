@@ -1,5 +1,4 @@
-<button class="button" type="button" data-open-activity>Nueva actividad</button>
-<div class="record-list activity-records"><h3>Actividades registradas <span>{{ activities|length }}</span></h3>
+<div class="record-list activity-records"><div class="record-section-head"><h3>Actividades registradas <span>{{ activities|length }}</span></h3><button class="button" type="button" data-open-activity>Nueva actividad</button></div>
   {% for activity in activities %}<article><div><strong>{{ activity.get_category_display }}</strong><p>{{ activity.amount|floatformat:0 }} {{ activity.unit }}</p><small>{{ activity.estimated_active_kcal|floatformat:0 }} kcal activas{% if activity.description %} · {{ activity.description }}{% endif %}</small></div><div class="record-actions"><a class="icon-button" href="?activity={{ activity.pk }}" aria-label="Editar actividad">✎</a><form method="post">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="activity_id" value="{{ activity.pk }}"><button class="icon-button danger" aria-label="Eliminar actividad">×</button></form></div></article>{% empty %}<p class="empty">Todavía no hay actividades registradas.</p>{% endfor %}
 </div>
 <dialog class="entry-dialog small-dialog" id="activityDialog" {% if editing_activity or form.errors %}data-open-on-load{% endif %}>

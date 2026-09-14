@@ -1,7 +1,8 @@
 {% if rising_blocked %}<div class="blocked-status">LEVANTAMIENTO · NO APLICA · SIN SUEÑO EL DÍA ANTERIOR</div>{% endif %}
-<form method="post" data-autosave="true" class="sleep-form">{% csrf_token %}<input type="hidden" name="action" value="save">
-  <section class="sleep-rising"><label class="field"><span>{{ form.rising_category.label }}</span>{{ form.rising_category }}</label></section>
-  <section class="sleep-period"><div class="sleep-period-head"><div><p class="eyebrow">PERIODO DE SUEÑO</p><h3>Horarios</h3></div><label class="sleep-skip">{{ form.no_sleep }}<span>{{ form.no_sleep.label }}</span></label></div><div class="sleep-time-grid" data-sleep-times><label class="field"><span>{{ form.fell_asleep_at.label }}</span>{{ form.fell_asleep_at }}</label><label class="field"><span>{{ form.woke_up_at.label }}</span>{{ form.woke_up_at }}</label></div></section>
-  <section class="sleep-details"><label class="field"><span>{{ form.adjustment_minutes.label }}</span>{{ form.adjustment_minutes }}</label><label class="field"><span>{{ form.description.label }}</span>{{ form.description }}</label></section>
-  {% if form.errors %}<div class="form-error">Revisa los datos de sueño.</div>{% endif %}<div class="form-actions"><button class="button" type="submit">Guardar ahora</button></div>
-</form>
+<div class="inline-data-list sleep-inline-list">
+  {% include 'dashboard/partials/inline_field.html' with field=form.rising_category %}
+  {% include 'dashboard/partials/inline_field.html' with field=form.no_sleep %}
+  <div data-sleep-times>{% include 'dashboard/partials/inline_field.html' with field=form.fell_asleep_at %}{% include 'dashboard/partials/inline_field.html' with field=form.woke_up_at %}</div>
+  {% include 'dashboard/partials/inline_field.html' with field=form.adjustment_minutes %}
+  {% include 'dashboard/partials/inline_field.html' with field=form.description %}
+</div>

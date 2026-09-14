@@ -2,7 +2,7 @@
   const sidebar = document.getElementById('sidebar');
   document.getElementById('menuToggle')?.addEventListener('click', () => sidebar?.classList.toggle('open'));
   document.addEventListener('click', (event) => {
-    if (window.innerWidth <= 760 && sidebar?.classList.contains('open') && !sidebar.contains(event.target) && event.target.id !== 'menuToggle') sidebar.classList.remove('open');
+    if (sidebar?.classList.contains('open') && !sidebar.contains(event.target) && event.target.id !== 'menuToggle') sidebar.classList.remove('open');
   });
 
   let openCustomSelect = null;
@@ -137,20 +137,53 @@
     form.addEventListener('submit', (event) => { event.preventDefault(); clearTimeout(timer); save(); });
   });
 
-  document.querySelectorAll('[data-inline-edit]').forEach((field) => {
-    const display = field.querySelector('.inline-display');
-    const input = field.querySelector('.inline-control input, .inline-control textarea, .inline-control select');
-    display?.addEventListener('click', () => {
-      field.classList.add('editing');
-      input?.focus();
-      input?.select?.();
-    });
-    input?.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') field.classList.remove('editing');
-      if (event.key === 'Enter' && input.tagName !== 'TEXTAREA') input.blur();
-    });
-    input?.addEventListener('blur', () => window.setTimeout(() => field.classList.remove('editing'), 250));
+  const csrfToken = () => document.cookie.split('; ').find((row) => row.startsWith('csrftoken='))?.split('=')[1] || document.querySelector('[data-page-csrf]')?.value || '';
+  const inlineRows = [...document.querySelectorAll('[data-inline-field]')];
+  const inlineInput = (row) => row.querySelector('input:not([type="hidden"]), textarea, select');
+  const closeInline = (row, restore = false) => {
+    const input = inlineInput(row);
+    if (restore && input) input.type === 'checkbox' ? input.checked = row.dataset.original === 'true' : input.value = row.dataset.original || '';
+    row.classList.remove('editing', 'saving');
+    row.querySelector('[data-inline-error]').textContent = '';
+  };
+  const saveInline = async (row) => {
+    if (row.classList.contains('saving')) return;
+    const input = inlineInput(row);
+    const value = input?.type === 'checkbox' ? String(input.checked) : input?.value ?? '';
+    if (value === row.dataset.original) return closeInline(row);
+    row.classList.add('saving');
+    setStatus('Guardando…', 'saving');
+    const payload = new FormData();
+    payload.set('csrfmiddlewaretoken', csrfToken()); payload.set('action', 'inline-save'); payload.set('field', row.dataset.field); payload.set('value', value);
+    try {
+      const response = await fetch(location.href, {method: 'POST', body: payload, headers: {'X-Requested-With': 'XMLHttpRequest'}});
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error || 'No se pudo guardar.');
+      row.dataset.original = value;
+      row.querySelector('[data-inline-text]').textContent = data.display;
+      closeInline(row);
+      setStatus('Guardado', 'saved');
+      if (row.dataset.field === 'no_sleep') document.querySelector('[data-sleep-times]')?.toggleAttribute('hidden', input.checked);
+    } catch (error) {
+      row.classList.remove('saving');
+      row.querySelector('[data-inline-error]').textContent = error.message;
+      setStatus('Error · reintenta', 'error');
+    }
+  };
+  inlineRows.forEach((row) => {
+    const input = inlineInput(row);
+    const begin = () => {
+      inlineRows.filter((item) => item !== row && item.classList.contains('editing')).forEach(saveInline);
+      row.dataset.original = input?.type === 'checkbox' ? String(input.checked) : input?.value || '';
+      row.classList.add('editing');
+      (row.querySelector('.custom-select-trigger') || input)?.focus(); input?.select?.();
+    };
+    row.querySelector('[data-inline-display]')?.addEventListener('click', begin);
+    row.querySelector('[data-inline-confirm]')?.addEventListener('click', () => saveInline(row));
+    row.querySelector('[data-inline-cancel]')?.addEventListener('click', () => closeInline(row, true));
+    input?.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeInline(row, true); if (event.key === 'Enter' && input.tagName !== 'TEXTAREA') { event.preventDefault(); saveInline(row); } });
   });
+  document.addEventListener('pointerdown', (event) => inlineRows.filter((row) => row.classList.contains('editing') && !row.contains(event.target)).forEach(saveInline));
 
   document.querySelectorAll('.photo-package-input').forEach((input) => {
     input.addEventListener('change', () => {
@@ -160,6 +193,19 @@
       if (name) name.textContent = input.files?.[0]?.name || 'Seleccionar';
     });
   });
+  document.querySelectorAll('[data-body-photo-form]').forEach((form) => form.querySelector('input[type="file"]')?.addEventListener('change', async () => {
+    const status = document.querySelector('[data-photo-upload-status]');
+    if (status) status.textContent = 'Guardando foto…';
+    try {
+      const response = await fetch(location.href, {method: 'POST', body: new FormData(form), headers: {'X-Requested-With': 'XMLHttpRequest'}});
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error || 'No se pudo guardar.');
+      form.querySelector('.photo-slot')?.classList.add('selected');
+      form.querySelector('[data-file-name]').textContent = 'Guardada';
+      if (status) status.textContent = `${data.count}/5 fotos guardadas`;
+      const analyze = document.querySelector('[data-analyze-body]'); if (analyze) analyze.disabled = data.count !== 5;
+    } catch (error) { if (status) status.textContent = error.message; }
+  }));
 
   const gallery = document.getElementById('bodyPhotoGallery');
   document.querySelector('[data-open-gallery]')?.addEventListener('click', () => gallery?.showModal());
@@ -255,7 +301,7 @@
     } finally { button.disabled = false; }
   });
 
-  const noSleep = document.querySelector('.sleep-form input[name="no_sleep"]');
+  const noSleep = document.querySelector('[data-field="no_sleep"] input[name="no_sleep"]');
   const sleepTimes = document.querySelector('[data-sleep-times]');
   const syncSleepTimes = () => {
     if (!sleepTimes || !noSleep) return;
@@ -263,6 +309,12 @@
   };
   noSleep?.addEventListener('change', syncSleepTimes);
   syncSleepTimes();
+
+  document.querySelector('[data-breakdown-toggle]')?.addEventListener('click', (event) => {
+    const summary = event.currentTarget.closest('.sticky-summary');
+    summary.classList.toggle('mobile-open');
+    event.currentTarget.textContent = summary.classList.contains('mobile-open') ? 'Ocultar desglose' : 'Ver desglose';
+  });
 
   window.setTimeout(() => document.querySelectorAll('.message').forEach(el => el.remove()), 4200);
 })();

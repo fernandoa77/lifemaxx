@@ -1,10 +1,5 @@
-<div class="nutrition-actions">
-  <button class="button" type="button" data-open-meal>Nueva comida</button>
-  <button class="button secondary" type="button" data-open-supplement>Agregar suplemento</button>
-</div>
-
 <div class="record-list nutrition-records">
-  <h3>Comidas registradas <span>{{ meals|length }}</span></h3>
+  <div class="record-section-head"><h3>Comidas registradas <span>{{ meals|length }}</span></h3><button class="button" type="button" data-open-meal>Nueva comida</button></div>
   {% for meal in meals %}
     <article>
       <div><strong>{{ meal.eaten_at|time:'H:i'|default:'Sin hora' }}</strong><p>{{ meal.description|default:'Registro manual' }}</p><small>{{ meal.calories|floatformat:0 }} kcal · {{ meal.protein_g|floatformat:1 }} g proteina · {{ meal.carbs_g|floatformat:1 }} g carbos · {{ meal.fat_g|floatformat:1 }} g grasa{% if meal.pure_alcohol_ml %} · {{ meal.pure_alcohol_ml|floatformat:1 }} ml alcohol{% endif %}</small></div>
@@ -14,11 +9,11 @@
 </div>
 
 <div class="subsection supplement-list">
-  <h3>Suplementos <span>{{ supplements|length }}</span></h3>
+  <div class="record-section-head"><h3>Suplementos <span>{{ supplements|length }}</span></h3><button class="button secondary compact-button" type="button" data-open-supplement>Nuevo suplemento</button></div>
   <div class="record-list slim">{% for supplement in supplements %}<article><div><strong>{{ supplement.name }}</strong><small>{{ supplement.dose }} {{ supplement.unit }}{% if supplement.taken_at %} · {{ supplement.taken_at|time:'H:i' }}{% endif %}{% if supplement.notes %} · {{ supplement.notes }}{% endif %}</small></div><form method="post">{% csrf_token %}<input type="hidden" name="action" value="supplement-delete"><input type="hidden" name="supplement_id" value="{{ supplement.pk }}"><button class="icon-button danger" aria-label="Eliminar suplemento">×</button></form></article>{% empty %}<p class="empty">Sin suplementos.</p>{% endfor %}</div>
 </div>
 
-<form method="post" data-autosave="true" class="nutrition-notes">{% csrf_token %}<input type="hidden" name="action" value="notes"><label class="field"><span>{{ nutrition_notes_form.nutrition_notes.label }}</span>{{ nutrition_notes_form.nutrition_notes }}</label></form>
+<div class="nutrition-notes inline-data-list">{% include 'dashboard/partials/inline_field.html' with field=nutrition_notes_form.nutrition_notes %}</div>
 
 <dialog class="entry-dialog" id="mealDialog" {% if editing_meal %}data-open-on-load{% endif %}>
   <div class="dialog-head"><div><p class="eyebrow">{% if editing_meal %}EDITAR{% else %}NUEVA{% endif %}</p><strong>Comida</strong></div><button type="button" data-close-dialog>×</button></div>
