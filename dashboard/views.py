@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Avg, Sum
+from django.db.models import Avg, Q, Sum
 from django.forms.models import model_to_dict
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -137,6 +137,29 @@ def _rising_blocked(day):
     return SleepEntry.objects.filter(day__date=previous_date, no_sleep=True).exists()
 
 
+def _body_rolling_averages(day):
+    fields = (
+        "weight_am_kg", "weight_pm_kg", "abdomen_cm", "visual_fat_percent",
+        "muscularity_rating", "face_rating", "body_rating",
+    )
+    rows = list(
+        BodyEntry.objects.filter(day__date__lte=day.date).filter(
+            Q(weight_am_kg__isnull=False) | Q(weight_pm_kg__isnull=False) | Q(abdomen_cm__isnull=False)
+            | Q(visual_fat_percent__isnull=False) | Q(muscularity_rating__isnull=False)
+            | Q(face_rating__isnull=False) | Q(body_rating__isnull=False)
+        )
+        .order_by("-day__date").values(*fields)[:7]
+    )
+    result = {}
+    for field in fields:
+        values = [Decimal(str(row[field])) for row in rows if row[field] is not None]
+        result[field] = {
+            "average": (sum(values, Decimal("0")) / len(values)) if values else None,
+            "count": len(values),
+        }
+    return result
+
+
 def _module_render(request, day, module, bound_form=None):
     start_date = challenge_start_date()
     if day.date < start_date:
@@ -181,6 +204,7 @@ def _module_render(request, day, module, bound_form=None):
         "body_analysis_form": bound_form if isinstance(bound_form, BodyAnalysisForm) else BodyAnalysisForm(instance=body),
         "photo_package_form": BodyPhotoPackageForm(),
         "has_body_analysis": bool(body.analysis_json or body.visual_fat_percent is not None or body.muscularity_rating is not None or body.face_rating is not None or body.body_rating is not None or body.llm_description),
+        "body_rolling": _body_rolling_averages(day) if module == "body" else {},
         "meals": day.meals.order_by("eaten_at", "created_at"), "activities": day.activities.all(), "supplements": day.supplements.order_by("taken_at", "created_at"),
         "supplement_form": SupplementForm(), "editing_meal": editing_meal, "editing_activity": editing_activity,
         "nutrition_notes_form": NutritionNotesForm(instance=day),
@@ -252,9 +276,12 @@ def _module_post(request, day, module):
                     delete_photo(image.file_id)
                 messages.error(request, str(exc))
                 return redirect("dashboard:module", date=day.date.isoformat(), module=module)
-            _mark_captured(day, module)
-            recalculate_day(day)
-            return _saved_response(request, day, module, "Paquete fotografico guardado")
+            BodyEntry.objects.filter(pk=body.pk).update(
+                visual_fat_percent=None, muscularity_rating=None, face_rating=None,
+                body_rating=None, llm_description="", analysis_json={},
+            )
+            _mark_captured(day, module, "processing")
+            return _analyze_body(request, day)
         if action == "analyze":
             return _analyze_body(request, day)
         if action == "save-analysis":

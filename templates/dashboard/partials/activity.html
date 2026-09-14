@@ -4,5 +4,10 @@
 </div>
 <dialog class="entry-dialog small-dialog" id="activityDialog" {% if editing_activity or form.errors %}data-open-on-load{% endif %}>
   <div class="dialog-head"><div><p class="eyebrow">{% if editing_activity %}EDITAR{% else %}NUEVA{% endif %}</p><strong>Actividad</strong></div><button type="button" data-close-dialog>×</button></div>
-  <form method="post" class="field-grid">{% csrf_token %}<input type="hidden" name="action" value="save">{% if editing_activity %}<input type="hidden" name="activity_id" value="{{ editing_activity.pk }}">{% endif %}{% include 'dashboard/partials/form_fields.html' %}<div class="form-actions"><button class="button" type="submit">{% if editing_activity %}Guardar cambios{% else %}Agregar actividad{% endif %}</button>{% if editing_activity %}<a class="cancel-link" href="{% url 'dashboard:module' day.date|date:'Y-m-d' module %}">Cancelar</a>{% endif %}</div></form>
+  <form method="post" class="field-grid activity-entry-form">{% csrf_token %}<input type="hidden" name="action" value="save">{% if editing_activity %}<input type="hidden" name="activity_id" value="{{ editing_activity.pk }}">{% endif %}
+    <label class="field"><span>{{ form.category.label }}</span>{{ form.category }}{% for error in form.category.errors %}<em>{{ error }}</em>{% endfor %}</label>
+    <label class="field"><span data-activity-amount-label>{{ form.amount.label }}</span>{{ form.amount }}<small data-activity-unit>Selecciona el tipo de actividad</small>{% for error in form.amount.errors %}<em>{{ error }}</em>{% endfor %}</label>
+    <label class="field"><span>{{ form.description.label }}</span>{{ form.description }}{% for error in form.description.errors %}<em>{{ error }}</em>{% endfor %}</label>
+    <div class="form-actions"><button class="button" type="submit">{% if editing_activity %}Guardar cambios{% else %}Agregar actividad{% endif %}</button>{% if editing_activity %}<a class="cancel-link" href="{% url 'dashboard:module' day.date|date:'Y-m-d' module %}">Cancelar</a>{% endif %}</div>
+  </form>
 </dialog>

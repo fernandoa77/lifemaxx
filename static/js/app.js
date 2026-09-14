@@ -172,10 +172,29 @@
   document.querySelector('[data-open-meal]')?.addEventListener('click', () => mealDialog?.showModal());
   document.querySelector('[data-open-supplement]')?.addEventListener('click', () => supplementDialog?.showModal());
   document.querySelector('[data-open-activity]')?.addEventListener('click', () => activityDialog?.showModal());
+  document.querySelector('[data-open-body-photos]')?.addEventListener('click', () => document.getElementById('bodyPhotoDialog')?.showModal());
   if (mealDialog?.hasAttribute('data-open-on-load')) mealDialog.showModal();
   if (activityDialog?.hasAttribute('data-open-on-load')) activityDialog.showModal();
   document.querySelectorAll('[data-close-dialog]').forEach((button) => button.addEventListener('click', () => button.closest('dialog')?.close()));
   document.querySelectorAll('.entry-dialog').forEach((dialog) => dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); }));
+
+  const activityCategory = activityDialog?.querySelector('[name="category"]');
+  const activityAmount = activityDialog?.querySelector('[name="amount"]');
+  const activityAmountLabel = activityDialog?.querySelector('[data-activity-amount-label]');
+  const activityUnit = activityDialog?.querySelector('[data-activity-unit]');
+  const syncActivityAmount = () => {
+    const quantity = {steps: ['Cantidad de pasos', 'pasos'], pushups: ['Cantidad de lagartijas', 'repeticiones']};
+    const duration = {functional_moderate: 'Funcional moderado', functional_intense: 'Funcional intenso', gym: 'Gimnasio'};
+    const config = quantity[activityCategory?.value] || (duration[activityCategory?.value] ? ['Duración', 'minutos'] : ['Tiempo o cantidad', 'Selecciona el tipo de actividad']);
+    if (activityAmountLabel) activityAmountLabel.textContent = config[0];
+    if (activityUnit) activityUnit.textContent = config[1];
+    if (activityAmount) {
+      activityAmount.placeholder = quantity[activityCategory?.value] ? '0' : 'Minutos';
+      activityAmount.step = quantity[activityCategory?.value] ? '1' : '0.01';
+    }
+  };
+  activityCategory?.addEventListener('change', syncActivityAmount);
+  syncActivityAmount();
 
   const mealForm = document.querySelector('[data-meal-form]');
   const aiIntake = mealForm?.querySelector('[data-ai-intake]');
