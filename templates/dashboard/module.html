@@ -15,7 +15,7 @@
   <div class="module-day-nav"><a href="{% url 'dashboard:module' day.date|date:'Y-m-d' previous_module %}">← {{ previous_module_meta.name }}</a><a href="{% url 'dashboard:day' day.date|date:'Y-m-d' %}">Vista del dia</a><a href="{% url 'dashboard:module' day.date|date:'Y-m-d' next_module %}">{{ next_module_meta.name }} →</a></div>
 </header>
 
-<div class="module-layout {% if module == 'body' %}body-layout{% endif %}">
+<div class="module-layout module-{{ module }} {% if module == 'body' %}body-layout{% endif %}">
   <section class="capture-panel">
     <div class="panel-head"><div><p class="eyebrow">CAPTURA</p><h2>Datos del dia</h2></div><span class="save-indicator" data-save-indicator><i></i> Listo</span></div>
 

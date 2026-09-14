@@ -5,6 +5,103 @@
     if (window.innerWidth <= 760 && sidebar?.classList.contains('open') && !sidebar.contains(event.target) && event.target.id !== 'menuToggle') sidebar.classList.remove('open');
   });
 
+  let openCustomSelect = null;
+  const closeCustomSelect = () => {
+    if (!openCustomSelect) return;
+    openCustomSelect.classList.remove('open');
+    openCustomSelect.querySelector('.custom-select-trigger')?.setAttribute('aria-expanded', 'false');
+    openCustomSelect = null;
+  };
+  document.querySelectorAll('select').forEach((select, selectIndex) => {
+    if (select.dataset.nativeSelect === 'true') return;
+    const wrapper = document.createElement('div');
+    const trigger = document.createElement('button');
+    const menu = document.createElement('div');
+    const menuId = `custom-select-${selectIndex}`;
+    wrapper.className = `custom-select${select.disabled ? ' disabled' : ''}`;
+    trigger.type = 'button';
+    trigger.className = 'custom-select-trigger';
+    trigger.disabled = select.disabled;
+    trigger.setAttribute('aria-haspopup', 'listbox');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.setAttribute('aria-controls', menuId);
+    menu.className = 'custom-select-menu';
+    menu.id = menuId;
+    menu.setAttribute('role', 'listbox');
+    menu.setAttribute('aria-label', select.getAttribute('aria-label') || select.name || 'Opciones');
+    const optionButtons = [...select.options].map((option) => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'custom-select-option';
+      item.textContent = option.textContent;
+      item.dataset.value = option.value;
+      item.disabled = option.disabled;
+      item.setAttribute('role', 'option');
+      menu.appendChild(item);
+      return item;
+    });
+    const sync = () => {
+      const selectedIndex = Math.max(select.selectedIndex, 0);
+      trigger.textContent = select.options[selectedIndex]?.textContent || 'Seleccionar';
+      optionButtons.forEach((item, index) => {
+        const active = index === select.selectedIndex;
+        item.classList.toggle('selected', active);
+        item.setAttribute('aria-selected', String(active));
+      });
+    };
+    const open = () => {
+      if (trigger.disabled) return;
+      if (openCustomSelect && openCustomSelect !== wrapper) closeCustomSelect();
+      wrapper.classList.add('open');
+      trigger.setAttribute('aria-expanded', 'true');
+      openCustomSelect = wrapper;
+      requestAnimationFrame(() => menu.querySelector('.selected')?.scrollIntoView({block: 'nearest'}));
+    };
+    const choose = (index) => {
+      const option = select.options[index];
+      if (!option || option.disabled) return;
+      select.selectedIndex = index;
+      sync();
+      select.dispatchEvent(new Event('change', {bubbles: true}));
+      closeCustomSelect();
+      trigger.focus();
+    };
+    optionButtons.forEach((item, index) => item.addEventListener('click', (event) => { event.stopPropagation(); choose(index); }));
+    trigger.addEventListener('click', (event) => {
+      event.stopPropagation();
+      wrapper.classList.contains('open') ? closeCustomSelect() : open();
+    });
+    trigger.addEventListener('keydown', (event) => {
+      const enabled = optionButtons.map((item, index) => !item.disabled ? index : null).filter((index) => index !== null);
+      let position = enabled.indexOf(select.selectedIndex);
+      if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+        event.preventDefault();
+        if (event.key === 'Home') position = 0;
+        else if (event.key === 'End') position = enabled.length - 1;
+        else position = Math.min(Math.max(position + (event.key === 'ArrowDown' ? 1 : -1), 0), enabled.length - 1);
+        open();
+        optionButtons[enabled[position]]?.focus();
+      } else if (event.key === 'Escape') closeCustomSelect();
+    });
+    menu.addEventListener('keydown', (event) => {
+      const enabled = optionButtons.filter((item) => !item.disabled);
+      const position = enabled.indexOf(document.activeElement);
+      if (event.key === 'Escape') { event.preventDefault(); closeCustomSelect(); trigger.focus(); }
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        enabled[Math.min(Math.max(position + (event.key === 'ArrowDown' ? 1 : -1), 0), enabled.length - 1)]?.focus();
+      }
+    });
+    select.classList.add('enhanced-select');
+    select.addEventListener('change', sync);
+    select.addEventListener('invalid', () => trigger.focus());
+    select.insertAdjacentElement('afterend', wrapper);
+    wrapper.append(trigger, menu);
+    sync();
+  });
+  document.addEventListener('click', (event) => { if (!event.target.closest('.custom-select')) closeCustomSelect(); });
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeCustomSelect(); });
+
   const indicator = document.querySelector('[data-save-indicator]');
   const setStatus = (label, kind = '') => {
     if (!indicator) return;
