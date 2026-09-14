@@ -15,17 +15,35 @@
   <div class="module-day-nav"><a href="{% url 'dashboard:module' day.date|date:'Y-m-d' previous_module %}">← {{ previous_module_meta.name }}</a><a href="{% url 'dashboard:day' day.date|date:'Y-m-d' %}">Vista del dia</a><a href="{% url 'dashboard:module' day.date|date:'Y-m-d' next_module %}">{{ next_module_meta.name }} →</a></div>
 </header>
 
-<div class="module-layout">
+<div class="module-layout {% if module == 'body' %}body-layout{% endif %}">
   <section class="capture-panel">
     <div class="panel-head"><div><p class="eyebrow">CAPTURA</p><h2>Datos del dia</h2></div><span class="save-indicator" data-save-indicator><i></i> Listo</span></div>
 
     {% if module == 'body' %}
-      <form method="post" enctype="multipart/form-data" data-autosave="true" class="field-grid">{% csrf_token %}<input type="hidden" name="action" value="save">{% include 'dashboard/partials/form_fields.html' %}</form>
-      <div class="subsection"><h3>Paquete fotografico <span>{{ photos|length }}/5</span></h3>
-        <form method="post" enctype="multipart/form-data" class="compact-form">{% csrf_token %}<input type="hidden" name="action" value="photo">{{ photo_form.as_div }}<button class="button secondary" type="submit">Guardar fotografia</button></form>
-        <div class="photo-strip">{% for photo in photos %}<figure><img src="{{ photo.image.url }}" alt="{{ photo.get_kind_display }}"><figcaption>{{ photo.get_kind_display }}</figcaption><form method="post">{% csrf_token %}<input type="hidden" name="action" value="photo-delete"><input type="hidden" name="photo_id" value="{{ photo.pk }}"><button class="photo-delete" aria-label="Eliminar fotografia">×</button></form></figure>{% empty %}<p class="empty">Sin fotografias.</p>{% endfor %}</div>
-        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="analyze"><button class="button ai" type="submit">✦ Analizar paquete con IA</button></form>
-      </div>
+      <section class="body-section">
+        <div class="body-section-head"><p class="eyebrow">MEDICIONES MANUALES</p><h3>Peso y panza</h3></div>
+        <form method="post" data-autosave="true" class="inline-value-grid">{% csrf_token %}<input type="hidden" name="action" value="save-measurements">
+          {% for field in form %}<div class="inline-edit" data-inline-edit><span>{{ field.label }}</span><button type="button" class="inline-display">{% if field.value != None and field.value != '' %}{{ field.value }}{% else %}—{% endif %}</button><div class="inline-control">{{ field }}</div>{% for error in field.errors %}<em>{{ error }}</em>{% endfor %}</div>{% endfor %}
+        </form>
+      </section>
+
+      <section class="body-section photo-package-section">
+        <div class="body-section-head"><p class="eyebrow">EVIDENCIA PARA IA</p><h3>Fotos estandarizadas <span>{{ photos|length }}/5</span></h3></div>
+        <form method="post" enctype="multipart/form-data" class="photo-package-form">{% csrf_token %}<input type="hidden" name="action" value="photo-package">
+          <div class="photo-package-grid">{% for field in photo_package_form %}<label class="photo-slot"><span>0{{ forloop.counter }}</span><strong>{{ field.label }}</strong>{{ field }}<small data-file-name>Seleccionar</small>{% for error in field.errors %}<em>{{ error }}</em>{% endfor %}</label>{% endfor %}</div>
+          <button class="button secondary" type="submit">Guardar paquete de 5 fotos</button>
+        </form>
+        {% if photos|length == 5 %}<div class="photo-package-actions"><button class="button ghost" type="button" data-open-gallery>Ver fotos</button><form method="post">{% csrf_token %}<input type="hidden" name="action" value="analyze"><button class="button ai" type="submit">✦ Analizar con IA</button></form></div>{% endif %}
+      </section>
+
+      {% if has_body_analysis %}<section class="body-section analysis-section">
+        <div class="body-section-head"><p class="eyebrow">RESULTADO IA · EDITABLE</p><h3>Analisis corporal</h3></div>
+        <form method="post" data-autosave="true" class="inline-value-grid analysis-grid">{% csrf_token %}<input type="hidden" name="action" value="save-analysis">
+          {% for field in body_analysis_form %}<div class="inline-edit {% if field.name == 'llm_description' %}wide{% endif %}" data-inline-edit><span>{{ field.label }}</span><button type="button" class="inline-display">{% if field.value != None and field.value != '' %}{{ field.value }}{% else %}—{% endif %}</button><div class="inline-control">{{ field }}</div>{% for error in field.errors %}<em>{{ error }}</em>{% endfor %}</div>{% endfor %}
+        </form>
+      </section>{% endif %}
+
+      {% if photos %}<dialog class="photo-dialog" id="bodyPhotoGallery"><div class="dialog-head"><strong>Fotos estandarizadas</strong><button type="button" data-close-gallery>×</button></div><div class="dialog-grid">{% for photo in photos %}<figure><img src="{{ photo.image_url }}" alt="{{ photo.get_kind_display }}"><figcaption>{{ photo.get_kind_display }}</figcaption></figure>{% endfor %}</div></dialog>{% endif %}
     {% elif module == 'nutrition' %}
       <form method="post" enctype="multipart/form-data" class="field-grid">{% csrf_token %}<input type="hidden" name="action" value="save">{% if editing_meal %}<input type="hidden" name="meal_id" value="{{ editing_meal.pk }}">{% endif %}{% include 'dashboard/partials/form_fields.html' %}<div class="form-actions"><button class="button" type="submit">{% if editing_meal %}Guardar correccion{% else %}Agregar comida{% endif %}</button>{% if editing_meal %}<a class="cancel-link" href="{% url 'dashboard:module' day.date|date:'Y-m-d' module %}">Cancelar</a>{% endif %}</div></form>
       <div class="record-list"><h3>Comidas registradas <span>{{ meals|length }}</span></h3>{% for meal in meals %}<article><div><strong>{{ meal.eaten_at|time:'H:i'|default:'Sin hora' }}</strong><p>{{ meal.description|default:'Registro manual' }}</p><small>{{ meal.calories|floatformat:0 }} kcal · {{ meal.protein_g|floatformat:1 }}g proteina · {{ meal.pure_alcohol_ml|floatformat:1 }}ml alcohol</small></div><div class="record-actions"><a class="icon-button" href="?meal={{ meal.pk }}" aria-label="Corregir">✎</a><form method="post">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="meal_id" value="{{ meal.pk }}"><button class="icon-button danger" aria-label="Eliminar">×</button></form></div></article>{% empty %}<p class="empty">Sin registros.</p>{% endfor %}</div>
@@ -41,14 +59,12 @@
     {% endif %}
   </section>
 
-  <aside class="calculation-panel">
+  {% if module != 'body' %}<aside class="calculation-panel">
     <div class="sticky-summary">
-      {% if module == 'body' %}<p class="eyebrow">DATOS DEL DIA</p><h2>Resumen corporal</h2>{% else %}<p class="eyebrow">CALCULO · {{ day.configuration_snapshot.pricing_versions|get_item:module }}</p><h2>Desglose</h2>{% endif %}
+      <p class="eyebrow">CALCULO · {{ day.configuration_snapshot.pricing_versions|get_item:module }}</p><h2>Desglose</h2>
       {% if breakdown.not_captured or breakdown.incomplete %}<div class="pending-box">Captura pendiente</div>{% endif %}
       <dl class="breakdown-list">
-      {% if module == 'body' %}
-        <div><dt>Fotos originales</dt><dd>{{ breakdown.photo_count|default:0 }}/5</dd></div><div><dt>Peso AM</dt><dd>{{ breakdown.weight_am_kg|default:'—' }} kg</dd></div><div><dt>Peso PM</dt><dd>{{ breakdown.weight_pm_kg|default:'—' }} kg</dd></div><div><dt>Panza</dt><dd>{{ breakdown.abdomen_cm|default:'—' }} cm</dd></div><div><dt>Grasa visual</dt><dd>{{ breakdown.visual_fat_percent|default:'—' }}%</dd></div><div><dt>Muscularidad</dt><dd>{{ breakdown.muscularity_rating|default:'—' }}</dd></div><div><dt>Rating corporal</dt><dd>{{ breakdown.body_rating|default:'—' }}</dd></div><div><dt>Rating facial</dt><dd>{{ breakdown.face_rating|default:'—' }}</dd></div>
-      {% elif module == 'nutrition' %}
+      {% if module == 'nutrition' %}
         <div><dt>Bonus base</dt><dd>{{ breakdown.base_bonus_h|mul:day.configuration_snapshot.hour_value_mxn|money }} <small>{{ breakdown.base_bonus_h|signed:3 }}H</small></dd></div><div><dt>Exceso calorico</dt><dd>{{ breakdown.calorie_cost_h|neg|mul:day.configuration_snapshot.hour_value_mxn|money }} <small>-{{ breakdown.calorie_cost_h|floatformat:3 }}H</small></dd></div><div><dt>Deficit proteina</dt><dd>{{ breakdown.protein_cost_h|neg|mul:day.configuration_snapshot.hour_value_mxn|money }} <small>-{{ breakdown.protein_cost_h|floatformat:3 }}H</small></dd></div><div><dt>Alcohol</dt><dd>{{ breakdown.alcohol_cost_h|neg|mul:day.configuration_snapshot.hour_value_mxn|money }} <small>-{{ breakdown.alcohol_cost_h|floatformat:3 }}H</small></dd></div><div><dt>Equivalentes cerveza</dt><dd>{{ breakdown.beer_equivalents|floatformat:2 }}</dd></div>
       {% elif module == 'activity' %}
         <div><dt>Credito bruto</dt><dd>{{ breakdown.gross_credit_h|mul:day.configuration_snapshot.hour_value_mxn|money }} <small>{{ breakdown.gross_credit_h|signed:3 }}H</small></dd></div><div><dt>Gasto base 24h</dt><dd>{{ breakdown.base_kcal|floatformat:0 }} kcal</dd></div><div><dt>Calorias activas netas</dt><dd>{{ breakdown.active_kcal|floatformat:0 }} kcal</dd></div><div><dt>Gasto diario estimado</dt><dd>{{ breakdown.total_kcal|floatformat:0 }} kcal</dd></div>
@@ -60,9 +76,9 @@
         <div><dt>Base seleccionada</dt><dd>{{ breakdown.base_h|mul:day.configuration_snapshot.hour_value_mxn|money }} <small>{{ breakdown.base_h|signed:3 }}H</small></dd></div><div><dt>Penalizacion cercana</dt><dd>{{ breakdown.close_penalty_h|neg|mul:day.configuration_snapshot.hour_value_mxn|money }} <small>-{{ breakdown.close_penalty_h|floatformat:3 }}H</small></dd></div><div><dt>Penalizacion mixta</dt><dd>{{ breakdown.mixed_penalty_h|neg|mul:day.configuration_snapshot.hour_value_mxn|money }} <small>-{{ breakdown.mixed_penalty_h|floatformat:3 }}H</small></dd></div><div><dt>Prioridad vigente</dt><dd>{{ day.configuration_snapshot.social_priority|upper }}</dd></div>
       {% endif %}
       </dl>
-      {% if module != 'body' %}<div class="formula-total"><span>VALOR DEL MODULO</span><div><strong>{{ module_value_mxn|money }}</strong><small>{{ module_value|signed }}H</small></div></div>{% endif %}
+      <div class="formula-total"><span>VALOR DEL MODULO</span><div><strong>{{ module_value_mxn|money }}</strong><small>{{ module_value|signed }}H</small></div></div>
       {% if submissions %}<div class="process-log"><h3>Procesamiento IA</h3>{% for item in submissions %}<div><span class="process-dot {{ item.status }}"></span><p><strong>{{ item.get_status_display }}</strong><small>{{ item.model_used|default:item.error_message|default:'Fuente preservada' }}</small></p></div>{% endfor %}</div>{% endif %}
     </div>
-  </aside>
+  </aside>{% endif %}
 </div>
 {% endblock %}

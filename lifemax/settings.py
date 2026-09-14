@@ -95,3 +95,8 @@ OPENROUTER_HTTP_REFERER = config("OPENROUTER_HTTP_REFERER", default="")
 OPENROUTER_APP_TITLE = config("OPENROUTER_APP_TITLE", default="LifeMax")
 OPENROUTER_TIMEOUT = config("OPENROUTER_TIMEOUT", default=90, cast=int)
 OPENROUTER_RETRIES = config("OPENROUTER_RETRIES", default=2, cast=int)
+
+# ImageKit: almacenamiento de evidencia fotografica corporal.
+IMAGEKIT_PRIVATE_KEY = config("IMAGEKIT_PRIVATE_KEY", default="")
+IMAGEKIT_URL_ENDPOINT = config("IMAGEKIT_URL_ENDPOINT", default="").rstrip("/")
+IMAGEKIT_FOLDER = "/" + config("IMAGEKIT_FOLDER", default="/lifemax/body").strip("/")

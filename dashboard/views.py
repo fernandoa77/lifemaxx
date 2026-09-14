@@ -3,6 +3,7 @@ import datetime as dt
 from decimal import Decimal
 
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Avg, Sum
 from django.forms.models import model_to_dict
 from django.http import Http404, JsonResponse
@@ -12,11 +13,13 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .forms import (
-    ActivityForm, AdjustmentForm, BodyForm, BodyPhotoForm, ConfigurationForm,
-    MealForm, MentalForm, SleepForm, SocialForm, SupplementForm,
+    ActivityForm, AdjustmentForm, BodyAnalysisForm, BodyMeasurementsForm,
+    BodyPhotoPackageForm, ConfigurationForm, MealForm, MentalForm, SleepForm,
+    SocialForm, SupplementForm,
 )
 from .models import Activity, BodyEntry, BodyPhoto, GlobalConfiguration, Meal, MentalEntry, SectionState, SleepEntry, SocialEntry, SourceSubmission, Supplement
 from .services.ai import AIUnavailable, BODY_SCHEMA, MEAL_SCHEMA, request_structured_json
+from .services.imagekit import ImageKitError, delete_photo, upload_body_photo
 from .services.pricing import (
     MODULE_KEYS, active_configuration, get_or_create_day, json_safe, recalculate_day,
     recalculate_mental_from, recalculate_social_week, record_revision,
@@ -130,7 +133,7 @@ def _module_render(request, day, module, bound_form=None):
     editing_meal = get_object_or_404(Meal, pk=request.GET["meal"], day=day) if module == "nutrition" and request.GET.get("meal") else None
     editing_activity = get_object_or_404(Activity, pk=request.GET["activity"], day=day) if module == "activity" and request.GET.get("activity") else None
     forms = {
-        "body": bound_form or BodyForm(instance=body),
+        "body": bound_form if isinstance(bound_form, BodyMeasurementsForm) else BodyMeasurementsForm(instance=body),
         "nutrition": bound_form or MealForm(instance=editing_meal),
         "activity": bound_form or ActivityForm(instance=editing_activity),
         "sleep": bound_form or SleepForm(instance=sleep, rising_blocked=rising_blocked),
@@ -148,7 +151,10 @@ def _module_render(request, day, module, bound_form=None):
         "module_value_mxn": (module_value * day.hour_value_mxn).quantize(Decimal("0.01")),
         "previous_module": previous_module, "previous_module_meta": MODULE_META[previous_module],
         "next_module": next_module, "next_module_meta": MODULE_META[next_module],
-        "body": body, "photo_form": BodyPhotoForm(), "photos": body.photos.all(),
+        "body": body, "photos": body.photos.all(),
+        "body_analysis_form": bound_form if isinstance(bound_form, BodyAnalysisForm) else BodyAnalysisForm(instance=body),
+        "photo_package_form": BodyPhotoPackageForm(),
+        "has_body_analysis": bool(body.analysis_json or body.visual_fat_percent is not None or body.muscularity_rating is not None or body.face_rating is not None or body.body_rating is not None or body.llm_description),
         "meals": day.meals.all(), "activities": day.activities.all(), "supplements": day.supplements.all(),
         "supplement_form": SupplementForm(), "editing_meal": editing_meal, "editing_activity": editing_activity,
         "rising_blocked": rising_blocked,
@@ -189,26 +195,44 @@ def _module_post(request, day, module):
     if module == "body":
         if action == "photo-delete":
             photo = get_object_or_404(BodyPhoto, pk=request.POST.get("photo_id"), body__day=day)
+            file_id = photo.image_file_id
             photo.delete()
+            delete_photo(file_id)
             recalculate_day(day)
             return _saved_response(request, day, module, "Fotografia eliminada")
-        if action == "photo":
-            form = BodyPhotoForm(request.POST, request.FILES)
+        if action == "photo-package":
+            form = BodyPhotoPackageForm(request.POST, request.FILES)
             if not form.is_valid():
-                return _form_error(request, form, day, module)
+                messages.error(request, "Selecciona las cinco fotografias estandarizadas.")
+                return redirect("dashboard:module", date=day.date.isoformat(), module=module)
             body, _ = BodyEntry.objects.get_or_create(day=day)
-            old = body.photos.filter(kind=form.cleaned_data["kind"]).first()
-            photo = form.save(commit=False)
-            photo.body = body
-            if old:
-                photo.pk = old.pk
-            photo.save()
+            uploaded = {}
+            try:
+                for kind in dict(BodyPhoto.TYPES):
+                    uploaded[kind] = upload_body_photo(form.cleaned_data[kind], date=day.date, kind=kind)
+                previous_ids = list(body.photos.values_list("image_file_id", flat=True))
+                with transaction.atomic():
+                    for kind, image in uploaded.items():
+                        BodyPhoto.objects.update_or_create(
+                            body=body, kind=kind,
+                            defaults={"image_url": image.url, "image_file_id": image.file_id, "captured_at": timezone.now()},
+                        )
+                for file_id in previous_ids:
+                    if file_id not in {image.file_id for image in uploaded.values()}:
+                        delete_photo(file_id)
+            except ImageKitError as exc:
+                for image in uploaded.values():
+                    delete_photo(image.file_id)
+                messages.error(request, str(exc))
+                return redirect("dashboard:module", date=day.date.isoformat(), module=module)
             _mark_captured(day, module)
             recalculate_day(day)
-            return _saved_response(request, day, module, "Fotografia guardada")
+            return _saved_response(request, day, module, "Paquete fotografico guardado")
         if action == "analyze":
             return _analyze_body(request, day)
-        return _save_singleton(request, day, module, BodyEntry, BodyForm)
+        if action == "save-analysis":
+            return _save_singleton(request, day, module, BodyEntry, BodyAnalysisForm)
+        return _save_singleton(request, day, module, BodyEntry, BodyMeasurementsForm)
 
     if module == "nutrition":
         if action == "supplement":
@@ -312,9 +336,9 @@ def _process_meal_ai(day, meal):
 
 def _analyze_body(request, day):
     body, _ = BodyEntry.objects.get_or_create(day=day)
-    paths = [photo.image.path for photo in body.photos.all()]
-    if not paths:
-        messages.error(request, "Sube al menos una fotografia antes de analizar.")
+    image_urls = list(body.photos.values_list("image_url", flat=True))
+    if len(image_urls) != 5:
+        messages.error(request, "Primero guarda el paquete de cinco fotografias.")
         return redirect("dashboard:module", date=day.date.isoformat(), module="body")
     source = SourceSubmission.objects.create(day=day, module="body", status="processing", prompt_version="body-1.0", source_text="Paquete fotografico corporal")
     _mark_captured(day, "body", "processing")
@@ -322,7 +346,7 @@ def _analyze_body(request, day):
         result = request_structured_json(
             system_prompt="Evalua el paquete fotografico con una rubrica visual constante. Informa advertencias de calidad.",
             user_content="Analiza solo lo visible y devuelve null si una metrica no puede evaluarse.",
-            images=paths, schema=BODY_SCHEMA, schema_name="life_body_assessment",
+            image_urls=image_urls, schema=BODY_SCHEMA, schema_name="life_body_assessment",
             context={"photo_types": list(body.photos.values_list("kind", flat=True)), "rating_scale": "0-10"},
         )
         data = result["data"]

@@ -27,6 +27,7 @@ def request_structured_json(
     schema,
     schema_name,
     images=None,
+    image_urls=None,
     model=None,
     context=None,
 ):
@@ -53,6 +54,8 @@ def request_structured_json(
     content = [{"type": "text", "text": str(user_content or "Analiza la evidencia adjunta.")}]
     for image_path in images or []:
         content.append({"type": "image_url", "image_url": {"url": _data_url(image_path)}})
+    for image_url in image_urls or []:
+        content.append({"type": "image_url", "image_url": {"url": image_url}})
     payload = {
         "model": selected_model,
         "messages": [

@@ -174,7 +174,8 @@ class BodyPhoto(TimestampedModel):
     )
     body = models.ForeignKey(BodyEntry, on_delete=models.CASCADE, related_name="photos")
     kind = models.CharField(max_length=20, choices=TYPES)
-    image = models.ImageField(upload_to="body/%Y/%m/%d/")
+    image_url = models.URLField(max_length=1000, blank=True)
+    image_file_id = models.CharField(max_length=160, blank=True, editable=False)
     captured_at = models.DateTimeField(default=timezone.now)
 
     class Meta:

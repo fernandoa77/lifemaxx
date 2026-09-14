@@ -25,6 +25,18 @@ OPENROUTER_FALLBACK_MODELS=
 
 Toda integracion de IA pasa por `dashboard/services/ai.py::request_structured_json`. La funcion acepta prompt, contexto, imagenes y un JSON Schema por modulo; solicita `response_format=json_schema` con modo estricto y bloquea propiedades adicionales. Nutricion y progreso corporal ya la reutilizan.
 
+## Fotografias corporales en ImageKit
+
+El paquete estandarizado de cinco tomas se sube con el mismo SDK de Jacob Web (`imagekitio`). Configura:
+
+```env
+IMAGEKIT_PRIVATE_KEY=private_xxx
+IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/tu_id
+IMAGEKIT_FOLDER=/lifemax/body
+```
+
+Cada foto se almacena en la base como URL y `file_id`. La imagen conserva el encuadre completo, normaliza la orientacion EXIF y se convierte a WebP con un maximo de 1800 px. ImageKit crea la ruta configurada al recibir la primera subida; tambien puedes crear manualmente la carpeta `/lifemax/body` desde el Media Library.
+
 ## Estructura
 
 - `lifemax/`: settings, URLs y entradas WSGI/ASGI siguiendo el patron de Studio Green.

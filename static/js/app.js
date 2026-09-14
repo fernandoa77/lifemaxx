@@ -40,5 +40,34 @@
     form.addEventListener('submit', (event) => { event.preventDefault(); clearTimeout(timer); save(); });
   });
 
+  document.querySelectorAll('[data-inline-edit]').forEach((field) => {
+    const display = field.querySelector('.inline-display');
+    const input = field.querySelector('.inline-control input, .inline-control textarea, .inline-control select');
+    display?.addEventListener('click', () => {
+      field.classList.add('editing');
+      input?.focus();
+      input?.select?.();
+    });
+    input?.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') field.classList.remove('editing');
+      if (event.key === 'Enter' && input.tagName !== 'TEXTAREA') input.blur();
+    });
+    input?.addEventListener('blur', () => window.setTimeout(() => field.classList.remove('editing'), 250));
+  });
+
+  document.querySelectorAll('.photo-package-input').forEach((input) => {
+    input.addEventListener('change', () => {
+      const slot = input.closest('.photo-slot');
+      const name = slot?.querySelector('[data-file-name]');
+      slot?.classList.toggle('selected', Boolean(input.files?.length));
+      if (name) name.textContent = input.files?.[0]?.name || 'Seleccionar';
+    });
+  });
+
+  const gallery = document.getElementById('bodyPhotoGallery');
+  document.querySelector('[data-open-gallery]')?.addEventListener('click', () => gallery?.showModal());
+  document.querySelector('[data-close-gallery]')?.addEventListener('click', () => gallery?.close());
+  gallery?.addEventListener('click', (event) => { if (event.target === gallery) gallery.close(); });
+
   window.setTimeout(() => document.querySelectorAll('.message').forEach(el => el.remove()), 4200);
 })();

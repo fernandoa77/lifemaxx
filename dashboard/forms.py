@@ -16,12 +16,20 @@ class StyledModelForm(forms.ModelForm):
             field.widget.attrs.setdefault("class", css)
 
 
-class BodyForm(StyledModelForm):
+class BodyMeasurementsForm(StyledModelForm):
     class Meta:
         model = BodyEntry
-        fields = ("weight_am_kg", "weight_pm_kg", "abdomen_cm", "visual_fat_percent", "muscularity_rating", "face_rating", "body_rating", "llm_description")
+        fields = ("weight_am_kg", "weight_pm_kg", "abdomen_cm")
         labels = {
             "weight_am_kg": "Peso AM (kg)", "weight_pm_kg": "Peso PM (kg)", "abdomen_cm": "Panza (cm)",
+        }
+
+
+class BodyAnalysisForm(StyledModelForm):
+    class Meta:
+        model = BodyEntry
+        fields = ("visual_fat_percent", "muscularity_rating", "face_rating", "body_rating", "llm_description")
+        labels = {
             "visual_fat_percent": "Grasa visual (%)", "muscularity_rating": "Muscularidad (0-10)",
             "face_rating": "Rating facial (0-10)", "body_rating": "Rating corporal (0-10)",
             "llm_description": "Descripcion del analisis",
@@ -29,11 +37,17 @@ class BodyForm(StyledModelForm):
         widgets = {"llm_description": forms.Textarea(attrs={"rows": 4})}
 
 
-class BodyPhotoForm(StyledModelForm):
-    class Meta:
-        model = BodyPhoto
-        fields = ("kind", "image")
-        labels = {"kind": "Toma", "image": "Fotografia original"}
+class BodyPhotoPackageForm(forms.Form):
+    body_front = forms.ImageField(label="Cuerpo frontal")
+    body_side = forms.ImageField(label="Cuerpo lateral")
+    body_back = forms.ImageField(label="Cuerpo posterior")
+    face_front = forms.ImageField(label="Rostro frontal")
+    face_side = forms.ImageField(label="Rostro lateral")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            field.widget.attrs.update({"class": "photo-package-input", "accept": "image/*", "data-photo-kind": name})
 
 
 class MealForm(StyledModelForm):
