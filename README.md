@@ -11,7 +11,13 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-Abre `http://127.0.0.1:8000/`. La primera visita crea la configuracion inicial (`H = $250 MXN`) y la fotografia de configuracion del dia.
+Antes del primer acceso crea un usuario administrador:
+
+```powershell
+python manage.py createsuperuser
+```
+
+Abre `http://127.0.0.1:8000/` e inicia sesión con ese usuario. La sesión se conserva durante 30 días, incluso al cerrar el navegador, y se renueva con cada uso; se puede cambiar con `SESSION_COOKIE_DAYS` en `.env` o cerrar manualmente desde la app. La primera visita autenticada crea la configuración inicial (`H = $250 MXN`) y la fotografía de configuración del día. El acceso se bloquea durante 30 minutos después de 5 intentos fallidos por usuario e IP; ambos valores se pueden ajustar en `.env` con `AXES_FAILURE_LIMIT` y `AXES_COOLOFF_MINUTES`.
 
 ## OpenRouter
 

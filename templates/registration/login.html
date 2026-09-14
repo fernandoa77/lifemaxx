@@ -1,0 +1,33 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090b0f">
+  <title>Acceder · LifeMaxx</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="auth-page">
+  <div class="noise"></div>
+  <main class="auth-card">
+    <div class="brand-mark">L<span>+</span></div>
+    <p class="eyebrow">ACCESO PRIVADO</p>
+    <h1>Bienvenido a LifeMaxx</h1>
+    <p class="auth-copy">Inicia sesión para continuar con tu seguimiento.</p>
+    <form method="post" class="auth-form">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="message error">Usuario o contraseña incorrectos.</div>{% endif %}
+      <label for="id_username">Usuario</label>
+      <input id="id_username" name="username" type="text" autocomplete="username" autofocus required>
+      <label for="id_password">Contraseña</label>
+      <input id="id_password" name="password" type="password" autocomplete="current-password" required>
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+      <button class="auth-submit" type="submit">Entrar</button>
+    </form>
+  </main>
+</body>
+</html>

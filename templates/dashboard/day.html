@@ -5,11 +5,11 @@
 {% block content %}
 <section class="day-hero">
   <div class="date-nav">
-    <a href="{% url 'dashboard:day' previous_date|date:'Y-m-d' %}" aria-label="Dia anterior">←</a>
+    <a href="{% url 'dashboard:day' previous_date|date:'Y-m-d' %}" aria-label="Día anterior">←</a>
     <form onchange="location.href='/dia/'+this.elements.date.value+'/'">
       <input name="date" type="date" value="{{ day.date|date:'Y-m-d' }}" aria-label="Seleccionar fecha">
     </form>
-    <a href="{% url 'dashboard:day' next_date|date:'Y-m-d' %}" aria-label="Dia siguiente">→</a>
+    <a href="{% url 'dashboard:day' next_date|date:'Y-m-d' %}" aria-label="Día siguiente">→</a>
     {% if day.date != today %}<a class="today-link" href="{% url 'dashboard:day' today|date:'Y-m-d' %}">HOY</a>{% endif %}
   </div>
   <div class="hero-grid">
@@ -31,7 +31,7 @@
 </section>
 
 <section class="section-heading">
-  <div><p class="eyebrow">SEIS AREAS · UNA LECTURA</p><h2>Tu dia, por modulo</h2></div>
+  <div><p class="eyebrow">SEIS ÁREAS · UNA LECTURA</p><h2>Tu día, por módulo</h2></div>
   <span class="save-state"><i></i> Datos sincronizados</span>
 </section>
 
@@ -58,8 +58,8 @@
         <div><span>Ratings cuerpo / cara</span><b>{{ card.breakdown.body_rating|default:'—' }} / {{ card.breakdown.face_rating|default:'—' }}</b></div>
         <div><span>Fotos</span><b>{{ card.breakdown.photo_count|default:0 }}/5</b></div>
       {% elif card.key == 'nutrition' %}
-        <div class="wide"><span>Calorias · {{ card.breakdown.calories|floatformat:0 }}/{{ card.breakdown.calorie_goal }}</span><div class="meter"><i style="width:{{ card.breakdown.calories|pct:card.breakdown.calorie_goal }}%"></i></div></div>
-        <div class="wide"><span>Proteina · {{ card.breakdown.protein|floatformat:0 }}/{{ card.breakdown.protein_goal_g }}g</span><div class="meter protein"><i style="width:{{ card.breakdown.protein|pct:card.breakdown.protein_goal_g }}%"></i></div></div>
+        <div class="wide"><span>Calorías · {{ card.breakdown.calories|floatformat:0 }}/{{ card.breakdown.calorie_goal }}</span><div class="meter"><i style="width:{{ card.breakdown.calories|pct:card.breakdown.calorie_goal }}%"></i></div></div>
+        <div class="wide"><span>Proteína · {{ card.breakdown.protein|floatformat:0 }}/{{ card.breakdown.protein_goal_g }}g</span><div class="meter protein"><i style="width:{{ card.breakdown.protein|pct:card.breakdown.protein_goal_g }}%"></i></div></div>
         <div><span>Alcohol</span><b>{{ card.breakdown.alcohol|floatformat:1 }} ml</b></div><div><span>Comidas</span><b>{{ card.breakdown.meal_count|default:0 }}</b></div>
       {% elif card.key == 'activity' %}
         <div><span>Pasos</span><b>{{ card.breakdown.steps|floatformat:0 }}</b></div><div><span>Lagartijas</span><b>{{ card.breakdown.pushups|floatformat:0 }}</b></div>
@@ -67,7 +67,7 @@
       {% elif card.key == 'sleep' %}
         <div><span>Dormí / desperté</span><b>{{ card.breakdown.fell_asleep_at|slice:'11:16'|default:'—' }} / {{ card.breakdown.woke_up_at|slice:'11:16'|default:'—' }}</b></div><div><span>Sueño total</span><b>{{ card.breakdown.total_minutes|minutes_hm }}</b></div><div><span>Desfase</span><b>{{ card.breakdown.deviation_minutes|default:'—' }}{% if card.breakdown.deviation_minutes %} min{% endif %}</b></div><div><span>Levantamiento</span><b>{{ card.breakdown.rising_category|default:'—' }}</b></div>
       {% elif card.key == 'mental' %}
-        <div><span>Pasivo +</span><b>{{ card.breakdown.minutes.pp|minutes_hm }}</b></div><div><span>Pasivo medio</span><b>{{ card.breakdown.minutes.pi|minutes_hm }}</b></div><div><span>Pasivo -</span><b>{{ card.breakdown.minutes.pn|minutes_hm }}</b></div><div><span>Activo medio</span><b>{{ card.breakdown.minutes.ai|minutes_hm }}</b></div><div><span>Activo +</span><b>{{ card.breakdown.minutes.ap|minutes_hm }}</b></div><div><span>Racha</span><b>{{ card.breakdown.resulting_streak|default:0 }} dias</b></div>
+        <div><span>Pasivo +</span><b>{{ card.breakdown.minutes.pp|minutes_hm }}</b></div><div><span>Pasivo medio</span><b>{{ card.breakdown.minutes.pi|minutes_hm }}</b></div><div><span>Pasivo -</span><b>{{ card.breakdown.minutes.pn|minutes_hm }}</b></div><div><span>Activo medio</span><b>{{ card.breakdown.minutes.ai|minutes_hm }}</b></div><div><span>Activo +</span><b>{{ card.breakdown.minutes.ap|minutes_hm }}</b></div><div><span>Racha</span><b>{{ card.breakdown.resulting_streak|default:0 }} días</b></div>
       {% else %}
         <div><span>Bruto</span><b>{% widthratio card.breakdown.raw_hours.family|add:card.breakdown.raw_hours.friends|add:card.breakdown.raw_hours.mixed_friends|add:card.breakdown.raw_hours.mixed_target|add:card.breakdown.raw_hours.target_friends 1 60 %} min</b></div>
         <div><span>Bonificado</span><b>{% widthratio card.breakdown.rewarded_hours.family|add:card.breakdown.rewarded_hours.friends|add:card.breakdown.rewarded_hours.mixed_friends|add:card.breakdown.rewarded_hours.mixed_target|add:card.breakdown.rewarded_hours.target_friends 1 60 %} min</b></div>
@@ -80,7 +80,7 @@
 </section>
 
 {% if not before_challenge %}<section class="adjustment-panel">
-  <div><p class="eyebrow">INTERVENCION MANUAL</p><h2>Ajuste marginal</h2></div>
+  <div><p class="eyebrow">INTERVENCIÓN MANUAL</p><h2>Ajuste marginal</h2></div>
   <form method="post" action="{% url 'dashboard:adjustment' day.date|date:'Y-m-d' %}">
     {% csrf_token %}
     <div class="inline-fields">{% for field in adjustment_form %}<label>{{ field.label }}{{ field }}{{ field.errors }}</label>{% endfor %}</div>

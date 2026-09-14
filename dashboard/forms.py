@@ -32,7 +32,7 @@ class BodyAnalysisForm(StyledModelForm):
         labels = {
             "visual_fat_percent": "Grasa visual (%)", "muscularity_rating": "Muscularidad (0-10)",
             "face_rating": "Rating facial (0-10)", "body_rating": "Rating corporal (0-10)",
-            "llm_description": "Descripcion del analisis",
+            "llm_description": "Descripción del análisis",
         }
         widgets = {"llm_description": forms.Textarea(attrs={"rows": 4})}
 
@@ -65,10 +65,10 @@ class MealForm(StyledModelForm):
             "alcoholic_drink", "beverage_volume_ml", "alcohol_abv_percent", "pure_alcohol_ml",
         )
         labels = {
-            "eaten_at": "Hora", "description": "Descripcion libre", "photo": "Foto",
-            "calories": "Calorias", "protein_g": "Proteina (g)", "carbs_g": "Carbohidratos (g)",
-            "fat_g": "Grasas (g)", "fiber_g": "Fibra (g)", "alcoholic_drink": "Bebida alcoholica",
-            "beverage_volume_ml": "Volumen (ml)", "alcohol_abv_percent": "Graduacion (%)",
+            "eaten_at": "Hora", "description": "Descripción libre", "photo": "Foto",
+            "calories": "Calorías", "protein_g": "Proteína (g)", "carbs_g": "Carbohidratos (g)",
+            "fat_g": "Grasas (g)", "fiber_g": "Fibra (g)", "alcoholic_drink": "Bebida alcohólica",
+            "beverage_volume_ml": "Volumen (ml)", "alcohol_abv_percent": "Graduación (%)",
             "pure_alcohol_ml": "Alcohol puro (ml)",
         }
         widgets = {"eaten_at": forms.TimeInput(attrs={"type": "time"}), "description": forms.Textarea(attrs={"rows": 3})}
@@ -88,15 +88,15 @@ class NutritionNotesForm(StyledModelForm):
     class Meta:
         model = DayRecord
         fields = ("nutrition_notes",)
-        labels = {"nutrition_notes": "Notas del dia"}
-        widgets = {"nutrition_notes": forms.Textarea(attrs={"rows": 3, "placeholder": "Notas generales de nutricion"})}
+        labels = {"nutrition_notes": "Notas del día"}
+        widgets = {"nutrition_notes": forms.Textarea(attrs={"rows": 3, "placeholder": "Notas generales de nutrición"})}
 
 
 class ActivityForm(StyledModelForm):
     class Meta:
         model = Activity
         fields = ("category", "amount", "description")
-        labels = {"category": "Categoria", "amount": "Tiempo o cantidad", "description": "Descripcion opcional"}
+        labels = {"category": "Categoría", "amount": "Tiempo o cantidad", "description": "Descripción opcional"}
         widgets = {"description": forms.Textarea(attrs={"rows": 2})}
 
 
@@ -120,7 +120,7 @@ class SleepForm(StyledModelForm):
         labels = {
             "no_sleep": "No dormí", "fell_asleep_at": "Me dormí", "woke_up_at": "Desperté",
             "adjustment_minutes": "Ajuste por siestas y despertares (min)", "rising_category": "Tiempo para levantarme hoy",
-            "description": "Descripcion personal",
+            "description": "Descripción personal",
         }
         widgets = {
             "fell_asleep_at": forms.TimeInput(format="%H:%M", attrs={"type": "time"}),
@@ -211,10 +211,10 @@ class ConfigurationForm(StyledModelForm):
             "height_cm", "birth_date", "biological_sex",
         )
         labels = {
-            "challenge_start_date": "Fecha de inicio del reto", "hour_value_mxn": "Valor de H (MXN)", "calorie_goal": "Objetivo calorico", "protein_goal_g": "Objetivo proteico (g)",
-            "fat_priority": "Prioridad de grasa", "muscle_priority": "Prioridad de musculo",
+            "challenge_start_date": "Fecha de inicio del reto", "hour_value_mxn": "Valor de H (MXN)", "calorie_goal": "Objetivo calórico", "protein_goal_g": "Objetivo proteico (g)",
+            "fat_priority": "Prioridad de grasa", "muscle_priority": "Prioridad de músculo",
             "social_priority": "Prioridad de convivencia target", "height_cm": "Estatura fija (cm)",
-            "birth_date": "Fecha de nacimiento", "biological_sex": "Sexo biologico (calculo energetico)",
+            "birth_date": "Fecha de nacimiento", "biological_sex": "Sexo biológico (cálculo energético)",
         }
         widgets = {"challenge_start_date": forms.DateInput(attrs={"type": "date"}), "birth_date": forms.DateInput(attrs={"type": "date"})}
 
@@ -232,7 +232,7 @@ class ConfigurationForm(StyledModelForm):
 
 class AdjustmentForm(forms.Form):
     adjustment_h = forms.DecimalField(max_digits=10, decimal_places=4, label="Ajuste firmado (H)", widget=forms.NumberInput(attrs={"class": "control", "step": "0.01"}))
-    adjustment_justification = forms.CharField(required=False, label="Justificacion", widget=forms.Textarea(attrs={"class": "control", "rows": 3}))
+    adjustment_justification = forms.CharField(required=False, label="Justificación", widget=forms.Textarea(attrs={"class": "control", "rows": 3}))
 
     def clean(self):
         data = super().clean()

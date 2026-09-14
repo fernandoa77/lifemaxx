@@ -443,7 +443,7 @@ def recalculate_day(day, *, save=True):
     if processing.exists():
         pending.append("Hay fuentes de IA pendientes o con error")
     if day.date == timezone.localdate():
-        pending.append("El dia sigue en curso")
+        pending.append("El día sigue en curso")
     if day.date.weekday() == 6 and day.date >= timezone.localdate():
         pending.append("Los minimos sociales semanales siguen abiertos")
 

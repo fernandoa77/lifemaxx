@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+from datetime import timedelta
 
 import dj_database_url
 from decouple import Csv, config
@@ -30,6 +31,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.humanize",
+    "axes",
     "dashboard",
 ]
 
@@ -42,6 +44,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Debe ir al final para poder convertir los bloqueos de Axes en una respuesta segura.
+    "axes.middleware.AxesMiddleware",
 ]
 
 ROOT_URLCONF = "lifemaxx.urls"
@@ -69,7 +73,32 @@ DATABASES = {
     "default": dj_database_url.config(default=_database_url, conn_max_age=600)
 }
 
-AUTH_PASSWORD_VALIDATORS = []  # MVP personal, sin autenticacion expuesta.
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "dashboard:home"
+LOGOUT_REDIRECT_URL = "login"
+# Mantiene la sesión entre aperturas del navegador para una app de uso personal.
+# El usuario puede cerrarla manualmente desde la barra lateral.
+SESSION_COOKIE_AGE = config("SESSION_COOKIE_DAYS", default=30, cast=int) * 24 * 60 * 60
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_SAVE_EVERY_REQUEST = True
+
+# django-axes registra los fallos y bloquea combinaciones de usuario e IP para
+# evitar ataques de fuerza bruta. Los valores pueden ajustarse sin cambiar código.
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+AXES_FAILURE_LIMIT = config("AXES_FAILURE_LIMIT", default=5, cast=int)
+AXES_COOLOFF_TIME = timedelta(minutes=config("AXES_COOLOFF_MINUTES", default=30, cast=int))
+AXES_LOCKOUT_PARAMETERS = ["username", "ip_address"]
+AXES_RESET_ON_SUCCESS = True
+AXES_LOCKOUT_TEMPLATE = "registration/lockout.html"
 LANGUAGE_CODE = "es-mx"
 TIME_ZONE = "America/Mexico_City"
 USE_I18N = True

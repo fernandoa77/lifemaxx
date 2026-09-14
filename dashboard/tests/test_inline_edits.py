@@ -1,6 +1,7 @@
 import datetime as dt
 from decimal import Decimal
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
@@ -13,6 +14,8 @@ class InlineEditTests(TestCase):
 
     def setUp(self):
         self.day = get_or_create_day(self.date)
+        self.user = get_user_model().objects.create_user("editor", password="test-password-123")
+        self.client.force_login(self.user)
 
     def save(self, module, field, value):
         return self.client.post(

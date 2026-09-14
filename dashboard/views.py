@@ -29,11 +29,11 @@ from .services.pricing import (
 
 MODULE_META = {
     "body": {"name": "Progreso corporal", "eyebrow": "Estado", "icon": "body"},
-    "nutrition": {"name": "Nutricion", "eyebrow": "Energia", "icon": "nutrition"},
-    "activity": {"name": "Actividad fisica", "eyebrow": "Movimiento", "icon": "activity"},
-    "sleep": {"name": "Sueño", "eyebrow": "Recuperacion", "icon": "sleep"},
-    "mental": {"name": "Mental y digital", "eyebrow": "Atencion", "icon": "mental"},
-    "social": {"name": "Vida social", "eyebrow": "Conexion", "icon": "social"},
+    "nutrition": {"name": "Nutrición", "eyebrow": "Energía", "icon": "nutrition"},
+    "activity": {"name": "Actividad física", "eyebrow": "Movimiento", "icon": "activity"},
+    "sleep": {"name": "Sueño", "eyebrow": "Recuperación", "icon": "sleep"},
+    "mental": {"name": "Mental y digital", "eyebrow": "Atención", "icon": "mental"},
+    "social": {"name": "Vida social", "eyebrow": "Conexión", "icon": "social"},
 }
 
 
@@ -41,7 +41,7 @@ def _date(value):
     try:
         return dt.date.fromisoformat(value)
     except (TypeError, ValueError) as exc:
-        raise Http404("Fecha invalida") from exc
+        raise Http404("Fecha inválida") from exc
 
 
 def _is_ajax(request):
@@ -100,7 +100,7 @@ def adjustment(request, date):
         return redirect("dashboard:day", date=date)
     form = AdjustmentForm(request.POST)
     if not form.is_valid():
-        messages.error(request, "El ajuste requiere una cantidad valida y justificacion cuando no es cero.")
+        messages.error(request, "El ajuste requiere una cantidad válida y justificación cuando no es cero.")
         return redirect("dashboard:day", date=date)
     previous = model_to_dict(day)
     day.adjustment_h = form.cleaned_data["adjustment_h"]
@@ -113,7 +113,7 @@ def adjustment(request, date):
 
 def module_detail(request, date, module):
     if module not in MODULE_META:
-        raise Http404("Modulo inexistente")
+        raise Http404("Módulo inexistente")
     day = get_or_create_day(_date(date))
     if request.method == "POST" and day.date < challenge_start_date():
         messages.error(request, "Este día está fuera del periodo del reto.")
@@ -259,7 +259,7 @@ def _module_post(request, day, module):
         if action == "photo-package":
             form = BodyPhotoPackageForm(request.POST, request.FILES)
             if not form.is_valid():
-                messages.error(request, "Selecciona las cinco fotografias estandarizadas.")
+                messages.error(request, "Selecciona las cinco fotografías estandarizadas.")
                 return redirect("dashboard:module", date=day.date.isoformat(), module=module)
             body, _ = BodyEntry.objects.get_or_create(day=day)
             uploaded = {}
@@ -505,13 +505,13 @@ def _analyze_body(request, day):
     body, _ = BodyEntry.objects.get_or_create(day=day)
     image_urls = list(body.photos.values_list("image_url", flat=True))
     if len(image_urls) != 5:
-        messages.error(request, "Primero guarda el paquete de cinco fotografias.")
+        messages.error(request, "Primero guarda el paquete de cinco fotografías.")
         return redirect("dashboard:module", date=day.date.isoformat(), module="body")
-    source = SourceSubmission.objects.create(day=day, module="body", status="processing", prompt_version="body-1.0", source_text="Paquete fotografico corporal")
+    source = SourceSubmission.objects.create(day=day, module="body", status="processing", prompt_version="body-1.0", source_text="Paquete fotográfico corporal")
     _mark_captured(day, "body", "processing")
     try:
         result = request_structured_json(
-            system_prompt="Evalua el paquete fotografico con una rubrica visual constante. Informa advertencias de calidad.",
+            system_prompt="Evalúa el paquete fotográfico con una rúbrica visual constante. Informa advertencias de calidad.",
             user_content="Analiza solo lo visible y devuelve null si una metrica no puede evaluarse.",
             image_urls=image_urls, schema=BODY_SCHEMA, schema_name="life_body_assessment",
             context={"photo_types": list(body.photos.values_list("kind", flat=True)), "rating_scale": "0-10"},
@@ -524,7 +524,7 @@ def _analyze_body(request, day):
         source.status, source.result_json, source.model_used = "processed", data, result["model"]
         source.save()
         _mark_captured(day, "body", "done")
-        messages.success(request, "Analisis corporal procesado.")
+        messages.success(request, "Análisis corporal procesado.")
     except AIUnavailable as exc:
         source.status, source.error_message = "error", str(exc)
         source.save(update_fields=("status", "error_message", "updated_at"))
@@ -624,8 +624,8 @@ def dashboard_view(request):
         social_rewarded += sum((Decimal(str(value or 0)) for value in (social.get("rewarded_hours") or {}).values()), Decimal("0"))
     behavior_groups = [
         {"name": "Progreso corporal", "metrics": [("Peso AM mas reciente", latest_body.get("weight_am_kg"), "kg"), ("Grasa visual", latest_body.get("visual_fat_percent"), "%"), ("Panza", latest_body.get("abdomen_cm"), "cm")]},
-        {"name": "Nutricion", "metrics": [("Calorias", total_path("nutrition", "calories"), "kcal"), ("Proteina", total_path("nutrition", "protein"), "g"), ("Alcohol puro", total_path("nutrition", "alcohol"), "ml")]},
-        {"name": "Actividad", "metrics": [("Pasos intencionales", total_path("activity", "steps"), ""), ("Lagartijas", total_path("activity", "pushups"), ""), ("Calorias activas", total_path("activity", "active_kcal"), "kcal")]},
+        {"name": "Nutrición", "metrics": [("Calorías", total_path("nutrition", "calories"), "kcal"), ("Proteína", total_path("nutrition", "protein"), "g"), ("Alcohol puro", total_path("nutrition", "alcohol"), "ml")]},
+        {"name": "Actividad", "metrics": [("Pasos intencionales", total_path("activity", "steps"), ""), ("Lagartijas", total_path("activity", "pushups"), ""), ("Calorías activas", total_path("activity", "active_kcal"), "kcal")]},
         {"name": "Sueño", "metrics": [("Promedio por noche", (sum(sleep_values) / len(sleep_values)) if sleep_values else 0, "min"), ("Desviacion acumulada", total_path("sleep", "deviation_minutes"), "min"), ("Noches capturadas", len(sleep_values), "")]},
         {"name": "Mental / digital", "metrics": [("Pasivo positivo", mental_totals["pp"], "min"), ("Pasivo negativo", mental_totals["pn"], "min"), ("Activo positivo", mental_totals["ap"], "min")]},
         {"name": "Vida social", "metrics": [("Tiempo bruto", social_raw, "h"), ("Tiempo bonificado", social_rewarded, "h"), ("Diferencia por topes", social_raw - social_rewarded, "h")]},

@@ -45,7 +45,7 @@ def _normalize_photo(file) -> bytes:
             image.save(output, format="WEBP", quality=88, method=6)
             return output.getvalue()
     except Exception as exc:
-        raise ImageKitError("No se pudo procesar una de las fotografias.") from exc
+        raise ImageKitError("No se pudo procesar una de las fotografías.") from exc
     finally:
         file.seek(0)
 
@@ -69,7 +69,7 @@ def upload_body_photo(file, *, date, kind) -> UploadedImage:
         raise
     except Exception as exc:
         logger.exception("ImageKit rechazo una fotografia corporal.")
-        raise ImageKitError("No fue posible subir el paquete fotografico.") from exc
+        raise ImageKitError("No fue posible subir el paquete fotográfico.") from exc
 
 
 def delete_photo(file_id):

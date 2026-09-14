@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib import admin
+from django.contrib.auth import views as auth_views
 from django.urls import include, path, re_path
 from django.views.static import serve
 
@@ -10,6 +11,8 @@ urlpatterns = [
     path("manifest.webmanifest", pwa.manifest, name="pwa_manifest"),
     path("sw.js", pwa.service_worker, name="pwa_service_worker"),
     path("admin/", admin.site.urls),
+    path("acceso/", auth_views.LoginView.as_view(template_name="registration/login.html"), name="login"),
+    path("salir/", auth_views.LogoutView.as_view(), name="logout"),
     path("", include("dashboard.urls", namespace="dashboard")),
 ]
 

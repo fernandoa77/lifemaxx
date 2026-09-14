@@ -32,14 +32,18 @@
         <a href="{% url 'dashboard:day' today|date:'Y-m-d' %}" class="{% block nav_today %}{% endblock %}"><span class="nav-dot"></span>Hoy</a>
         <a href="{% url 'dashboard:calendar_current' %}" class="{% block nav_calendar %}{% endblock %}"><span class="nav-dot"></span>Calendario</a>
         <a href="{% url 'dashboard:dashboard' %}" class="{% block nav_dashboard %}{% endblock %}"><span class="nav-dot"></span>Dashboard</a>
-        <a href="{% url 'dashboard:settings' %}" class="{% block nav_settings %}{% endblock %}"><span class="nav-dot"></span>Configuracion</a>
+        <a href="{% url 'dashboard:settings' %}" class="{% block nav_settings %}{% endblock %}"><span class="nav-dot"></span>Configuración</a>
       </nav>
       <a class="streak-card" href="{% url 'dashboard:module' today|date:'Y-m-d' 'mental' %}">
         <span class="flame">◒</span>
-        <span><small>RACHA SIN ROMPER</small><strong>{{ global_streak }} dias</strong></span>
+        <span><small>RACHA SIN ROMPER</small><strong>{{ global_streak }} días</strong></span>
         <span class="arrow">↗</span>
       </a>
-      <div class="sidebar-foot"><span class="status-led"></span> Sistema operativo</div>
+      <div class="sidebar-foot"><span class="status-led"></span> {{ request.user.username }}</div>
+      <form method="post" action="{% url 'logout' %}" class="logout-form">
+        {% csrf_token %}
+        <button type="submit" class="logout-button">Cerrar sesión</button>
+      </form>
     </aside>
     <header class="mobile-bar">
       <button type="button" id="menuToggle" aria-label="Abrir menu">☰</button>

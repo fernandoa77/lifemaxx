@@ -67,7 +67,7 @@ class GlobalConfiguration(TimestampedModel):
 
     class Meta:
         ordering = ["-effective_from", "-pk"]
-        verbose_name = "configuracion global"
+        verbose_name = "configuración global"
         verbose_name_plural = "configuraciones globales"
 
     def snapshot(self):
@@ -90,7 +90,7 @@ class GlobalConfiguration(TimestampedModel):
         }
 
     def __str__(self):
-        return f"Configuracion desde {timezone.localtime(self.effective_from):%d/%m/%Y %H:%M}"
+        return f"Configuración desde {timezone.localtime(self.effective_from):%d/%m/%Y %H:%M}"
 
 
 class DayRecord(TimestampedModel):
@@ -126,7 +126,7 @@ class DayRecord(TimestampedModel):
 
     def clean(self):
         if self.adjustment_h and not self.adjustment_justification.strip():
-            raise ValidationError({"adjustment_justification": "La justificacion es obligatoria para un ajuste distinto de cero."})
+            raise ValidationError({"adjustment_justification": "La justificación es obligatoria para un ajuste distinto de cero."})
 
     def __str__(self):
         return self.date.isoformat()
@@ -135,8 +135,8 @@ class DayRecord(TimestampedModel):
 class SectionState(TimestampedModel):
     MODULES = (
         ("body", "Progreso corporal"),
-        ("nutrition", "Nutricion"),
-        ("activity", "Actividad fisica"),
+        ("nutrition", "Nutrición"),
+        ("activity", "Actividad física"),
         ("sleep", "Sueño"),
         ("mental", "Mental y digital"),
         ("social", "Vida social"),
@@ -145,7 +145,7 @@ class SectionState(TimestampedModel):
         ("idle", "Sin proceso"),
         ("processing", "Procesando"),
         ("done", "Procesado"),
-        ("correction", "Requiere correccion"),
+        ("correction", "Requiere corrección"),
         ("error", "Error"),
     )
 
