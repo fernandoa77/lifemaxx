@@ -8,6 +8,6 @@
     "preDeployCommand": [
       "python manage.py migrate --noinput"
     ],
-    "startCommand": "gunicorn lifemaxx.wsgi:application --bind 0.0.0.0:$PORT --access-logfile - --error-logfile - --log-level info --timeout 120 --graceful-timeout 30"
+    "startCommand": "python manage.py migrate --noinput && gunicorn lifemaxx.wsgi:application --bind 0.0.0.0:$PORT --access-logfile - --error-logfile - --log-level info --timeout 120 --graceful-timeout 30"
   }
 }
