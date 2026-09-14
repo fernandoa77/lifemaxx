@@ -51,6 +51,8 @@ Cada foto se almacena en la base como URL y `file_id`. La imagen conserva el enc
 
 El `Procfile` ejecuta migraciones y `collectstatic` en release y sirve la aplicacion con Gunicorn. `DATABASE_URL` cambia automaticamente de SQLite local a PostgreSQL; WhiteNoise sirve los archivos estaticos. Los uploads viven en `MEDIA_ROOT`, por lo que en produccion deben conectarse a almacenamiento persistente.
 
+En Railway, `railway.json` ejecuta `collectstatic` durante el build, las migraciones antes del deploy y luego inicia Gunicorn. Esto evita que un Start Command autodetectado omita la generacion de `staticfiles/`.
+
 Configura estas variables en el panel del proveedor (Railway, Render, etc.):
 
 ```env

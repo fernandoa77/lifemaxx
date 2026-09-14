@@ -1,0 +1,13 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "RAILPACK",
+    "buildCommand": "python manage.py collectstatic --noinput --clear"
+  },
+  "deploy": {
+    "preDeployCommand": [
+      "python manage.py migrate --noinput"
+    ],
+    "startCommand": "gunicorn lifemaxx.wsgi:application --bind 0.0.0.0:$PORT --access-logfile - --error-logfile - --log-level info --timeout 120 --graceful-timeout 30"
+  }
+}
