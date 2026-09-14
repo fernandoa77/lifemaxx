@@ -71,9 +71,12 @@
 
   const mealDialog = document.getElementById('mealDialog');
   const supplementDialog = document.getElementById('supplementDialog');
+  const activityDialog = document.getElementById('activityDialog');
   document.querySelector('[data-open-meal]')?.addEventListener('click', () => mealDialog?.showModal());
   document.querySelector('[data-open-supplement]')?.addEventListener('click', () => supplementDialog?.showModal());
+  document.querySelector('[data-open-activity]')?.addEventListener('click', () => activityDialog?.showModal());
   if (mealDialog?.hasAttribute('data-open-on-load')) mealDialog.showModal();
+  if (activityDialog?.hasAttribute('data-open-on-load')) activityDialog.showModal();
   document.querySelectorAll('[data-close-dialog]').forEach((button) => button.addEventListener('click', () => button.closest('dialog')?.close()));
   document.querySelectorAll('.entry-dialog').forEach((dialog) => dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); }));
 
@@ -135,6 +138,15 @@
       if (status) status.textContent = error.message;
     } finally { button.disabled = false; }
   });
+
+  const noSleep = document.querySelector('.sleep-form input[name="no_sleep"]');
+  const sleepTimes = document.querySelector('[data-sleep-times]');
+  const syncSleepTimes = () => {
+    if (!sleepTimes || !noSleep) return;
+    sleepTimes.hidden = noSleep.checked;
+  };
+  noSleep?.addEventListener('change', syncSleepTimes);
+  syncSleepTimes();
 
   window.setTimeout(() => document.querySelectorAll('.message').forEach(el => el.remove()), 4200);
 })();

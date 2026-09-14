@@ -1,0 +1,11 @@
+<form method="post" data-autosave="true" class="mental-form">{% csrf_token %}<input type="hidden" name="action" value="save">
+  <div class="mental-time-list">
+    <div class="mental-time-row"><strong>Pasivo positivo</strong><label><small>{{ form.passive_positive_minutes.label }}</small>{{ form.passive_positive_minutes }}</label><label class="mental-context"><small>{{ form.passive_positive_description.label }}</small>{{ form.passive_positive_description }}</label></div>
+    <div class="mental-time-row"><strong>Pasivo intermedio</strong><label><small>{{ form.passive_intermediate_minutes.label }}</small>{{ form.passive_intermediate_minutes }}</label><label class="mental-context"><small>{{ form.passive_intermediate_description.label }}</small>{{ form.passive_intermediate_description }}</label></div>
+    <div class="mental-time-row"><strong>Pasivo negativo</strong><label><small>{{ form.passive_negative_minutes.label }}</small>{{ form.passive_negative_minutes }}</label><label class="mental-context"><small>{{ form.passive_negative_description.label }}</small>{{ form.passive_negative_description }}</label></div>
+    <div class="mental-time-row"><strong>Activo intermedio</strong><label><small>{{ form.active_intermediate_minutes.label }}</small>{{ form.active_intermediate_minutes }}</label><label class="mental-context"><small>{{ form.active_intermediate_description.label }}</small>{{ form.active_intermediate_description }}</label></div>
+    <div class="mental-time-row"><strong>Activo positivo</strong><label><small>{{ form.active_positive_minutes.label }}</small>{{ form.active_positive_minutes }}</label><label class="mental-context"><small>{{ form.active_positive_description.label }}</small>{{ form.active_positive_description }}</label></div>
+  </div>
+  <section class="mental-secondary"><p class="eyebrow">CAMPOS SECUNDARIOS</p><div class="field-grid">{% for field in form %}{% if field.name == 'broken_glasses' or field.name == 'elo' or field.name == 'soa_exercises' or field.name == 'personal_commits' %}<label class="field"><span>{{ field.label }}</span>{{ field }}</label>{% endif %}{% endfor %}</div></section>
+  {% if form.errors %}<div class="form-error">Revisa los campos marcados.</div>{% endif %}<div class="form-actions"><button class="button" type="submit">Guardar ahora</button></div>
+</form>

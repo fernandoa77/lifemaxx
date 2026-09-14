@@ -113,8 +113,8 @@ class SleepForm(StyledModelForm):
         model = SleepEntry
         fields = ("no_sleep", "fell_asleep_at", "woke_up_at", "adjustment_minutes", "rising_category", "description")
         labels = {
-            "no_sleep": "No dormi", "fell_asleep_at": "Me dormi", "woke_up_at": "Desperte",
-            "adjustment_minutes": "Ajuste firmado (min)", "rising_category": "Tiempo para levantarme hoy",
+            "no_sleep": "No dormí", "fell_asleep_at": "Me dormí", "woke_up_at": "Desperté",
+            "adjustment_minutes": "Ajuste por siestas y despertares (min)", "rising_category": "Tiempo para levantarme hoy",
             "description": "Descripcion personal",
         }
         widgets = {
@@ -153,14 +153,21 @@ class SleepForm(StyledModelForm):
 class MentalForm(StyledModelForm):
     class Meta:
         model = MentalEntry
-        exclude = ("day", "prior_streak", "resulting_streak", "created_at", "updated_at")
+        fields = (
+            "passive_positive_minutes", "passive_positive_description",
+            "passive_intermediate_minutes", "passive_intermediate_description",
+            "passive_negative_minutes", "passive_negative_description",
+            "active_intermediate_minutes", "active_intermediate_description",
+            "active_positive_minutes", "active_positive_description",
+            "broken_glasses", "elo", "soa_exercises", "personal_commits",
+        )
         labels = {
-            "passive_positive_minutes": "Pasivo positivo (min)", "passive_positive_description": "Contexto pasivo positivo",
-            "passive_intermediate_minutes": "Pasivo intermedio (min)", "passive_intermediate_description": "Contexto pasivo intermedio",
-            "passive_negative_minutes": "Pasivo negativo (min)", "passive_negative_description": "Contexto pasivo negativo",
-            "active_intermediate_minutes": "Activo intermedio (min)", "active_intermediate_description": "Contexto activo intermedio",
-            "active_positive_minutes": "Activo positivo (min)", "active_positive_description": "Contexto activo positivo",
-            "broken_glasses": "Copas rotas", "elo": "Elo", "solved_problems": "Problemas resueltos",
+            "passive_positive_minutes": "Min", "passive_positive_description": "Contexto",
+            "passive_intermediate_minutes": "Min", "passive_intermediate_description": "Contexto",
+            "passive_negative_minutes": "Min", "passive_negative_description": "Contexto",
+            "active_intermediate_minutes": "Min", "active_intermediate_description": "Contexto",
+            "active_positive_minutes": "Min", "active_positive_description": "Contexto",
+            "broken_glasses": "Copas rotas", "elo": "Cambio ELO",
             "soa_exercises": "Ejercicios SOA", "personal_commits": "Commits personales",
         }
         widgets = {
@@ -170,6 +177,15 @@ class MentalForm(StyledModelForm):
             "active_intermediate_description": forms.Textarea(attrs={"rows": 2}),
             "active_positive_description": forms.Textarea(attrs={"rows": 2}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in (
+            "passive_positive_minutes", "passive_intermediate_minutes", "passive_negative_minutes",
+            "active_intermediate_minutes", "active_positive_minutes",
+        ):
+            self.fields[name].max_value = 999
+            self.fields[name].widget.attrs.update({"max": "999", "inputmode": "numeric"})
 
 
 class SocialForm(StyledModelForm):

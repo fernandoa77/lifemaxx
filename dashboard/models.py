@@ -130,7 +130,7 @@ class SectionState(TimestampedModel):
         ("body", "Progreso corporal"),
         ("nutrition", "Nutricion"),
         ("activity", "Actividad fisica"),
-        ("sleep", "Sueno"),
+        ("sleep", "Sueño"),
         ("mental", "Mental y digital"),
         ("social", "Vida social"),
     )

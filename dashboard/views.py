@@ -31,7 +31,7 @@ MODULE_META = {
     "body": {"name": "Progreso corporal", "eyebrow": "Estado", "icon": "body"},
     "nutrition": {"name": "Nutricion", "eyebrow": "Energia", "icon": "nutrition"},
     "activity": {"name": "Actividad fisica", "eyebrow": "Movimiento", "icon": "activity"},
-    "sleep": {"name": "Sueno", "eyebrow": "Recuperacion", "icon": "sleep"},
+    "sleep": {"name": "Sueño", "eyebrow": "Recuperacion", "icon": "sleep"},
     "mental": {"name": "Mental y digital", "eyebrow": "Atencion", "icon": "mental"},
     "social": {"name": "Vida social", "eyebrow": "Conexion", "icon": "social"},
 }
@@ -135,6 +135,8 @@ def _module_render(request, day, module, bound_form=None):
     if module == "nutrition" and isinstance(bound_form, MealForm) and bound_form.instance.pk:
         editing_meal = bound_form.instance
     editing_activity = get_object_or_404(Activity, pk=request.GET["activity"], day=day) if module == "activity" and request.GET.get("activity") else None
+    if module == "activity" and isinstance(bound_form, ActivityForm) and bound_form.instance.pk:
+        editing_activity = bound_form.instance
     forms = {
         "body": bound_form if isinstance(bound_form, BodyMeasurementsForm) else BodyMeasurementsForm(instance=body),
         "nutrition": bound_form or MealForm(instance=editing_meal),
@@ -298,6 +300,7 @@ def _module_post(request, day, module):
         if action == "delete":
             activity = get_object_or_404(Activity, pk=request.POST.get("activity_id"), day=day)
             activity.delete()
+            SectionState.objects.filter(day=day, module=module).update(captured=day.activities.exists())
             recalculate_day(day)
             return _saved_response(request, day, module, "Actividad eliminada")
         activity_id = request.POST.get("activity_id")
@@ -473,7 +476,7 @@ def dashboard_view(request):
         {"name": "Progreso corporal", "metrics": [("Peso AM mas reciente", latest_body.get("weight_am_kg"), "kg"), ("Grasa visual", latest_body.get("visual_fat_percent"), "%"), ("Panza", latest_body.get("abdomen_cm"), "cm")]},
         {"name": "Nutricion", "metrics": [("Calorias", total_path("nutrition", "calories"), "kcal"), ("Proteina", total_path("nutrition", "protein"), "g"), ("Alcohol puro", total_path("nutrition", "alcohol"), "ml")]},
         {"name": "Actividad", "metrics": [("Pasos intencionales", total_path("activity", "steps"), ""), ("Lagartijas", total_path("activity", "pushups"), ""), ("Calorias activas", total_path("activity", "active_kcal"), "kcal")]},
-        {"name": "Sueno", "metrics": [("Promedio por noche", (sum(sleep_values) / len(sleep_values)) if sleep_values else 0, "min"), ("Desviacion acumulada", total_path("sleep", "deviation_minutes"), "min"), ("Noches capturadas", len(sleep_values), "")]},
+        {"name": "Sueño", "metrics": [("Promedio por noche", (sum(sleep_values) / len(sleep_values)) if sleep_values else 0, "min"), ("Desviacion acumulada", total_path("sleep", "deviation_minutes"), "min"), ("Noches capturadas", len(sleep_values), "")]},
         {"name": "Mental / digital", "metrics": [("Pasivo positivo", mental_totals["pp"], "min"), ("Pasivo negativo", mental_totals["pn"], "min"), ("Activo positivo", mental_totals["ap"], "min")]},
         {"name": "Vida social", "metrics": [("Tiempo bruto", social_raw, "h"), ("Tiempo bonificado", social_rewarded, "h"), ("Diferencia por topes", social_raw - social_rewarded, "h")]},
     ]
