@@ -18,11 +18,11 @@ from .forms import (
     BodyPhotoPackageForm, ConfigurationForm, MealForm, MentalForm, NutritionNotesForm, SleepForm,
     SocialForm, SupplementForm,
 )
-from .models import Activity, BodyEntry, BodyPhoto, GlobalConfiguration, Meal, MentalEntry, SectionState, SleepEntry, SocialEntry, SourceSubmission, Supplement
+from .models import Activity, BodyEntry, BodyPhoto, DayRecord, GlobalConfiguration, Meal, MentalEntry, SectionState, SleepEntry, SocialEntry, SourceSubmission, Supplement
 from .services.ai import AIUnavailable, BODY_SCHEMA, MEAL_SCHEMA, request_structured_json
 from .services.imagekit import ImageKitError, delete_photo, upload_body_photo
 from .services.pricing import (
-    MODULE_KEYS, active_configuration, get_or_create_day, json_safe, recalculate_day,
+    MODULE_KEYS, active_configuration, challenge_start_date, get_or_create_day, json_safe, recalculate_day,
     recalculate_mental_from, recalculate_social_week, record_revision,
 )
 
@@ -74,6 +74,8 @@ def home(request):
 def day_detail(request, date):
     day = get_or_create_day(_date(date))
     day = recalculate_day(day)
+    start_date = challenge_start_date()
+    before_challenge = day.date < start_date
     cards = []
     for key, meta in MODULE_META.items():
         value = Decimal(str(day.module_values_h.get(key, 0)))
@@ -86,12 +88,16 @@ def day_detail(request, date):
     return render(request, "dashboard/day.html", {
         "day": day, "cards": cards, "adjustment_form": adjustment_form,
         "previous_date": day.date - dt.timedelta(days=1), "next_date": day.date + dt.timedelta(days=1),
+        "before_challenge": before_challenge, "challenge_start_date": start_date,
     })
 
 
 @require_POST
 def adjustment(request, date):
     day = get_or_create_day(_date(date))
+    if day.date < challenge_start_date():
+        messages.error(request, "Este día está fuera del periodo del reto.")
+        return redirect("dashboard:day", date=date)
     form = AdjustmentForm(request.POST)
     if not form.is_valid():
         messages.error(request, "El ajuste requiere una cantidad valida y justificacion cuando no es cero.")
@@ -109,6 +115,9 @@ def module_detail(request, date, module):
     if module not in MODULE_META:
         raise Http404("Modulo inexistente")
     day = get_or_create_day(_date(date))
+    if request.method == "POST" and day.date < challenge_start_date():
+        messages.error(request, "Este día está fuera del periodo del reto.")
+        return redirect("dashboard:day", date=date)
     if request.method == "POST":
         return _module_post(request, day, module)
     recalculate_day(day)
@@ -129,6 +138,18 @@ def _rising_blocked(day):
 
 
 def _module_render(request, day, module, bound_form=None):
+    start_date = challenge_start_date()
+    if day.date < start_date:
+        module_index = MODULE_KEYS.index(module)
+        previous_module = MODULE_KEYS[(module_index - 1) % len(MODULE_KEYS)]
+        next_module = MODULE_KEYS[(module_index + 1) % len(MODULE_KEYS)]
+        return render(request, "dashboard/module.html", {
+            "day": day, "module": module, "meta": MODULE_META[module], "module_value": Decimal("0"),
+            "module_value_mxn": Decimal("0"), "breakdown": {"excluded_before_challenge": True},
+            "previous_module": previous_module, "previous_module_meta": MODULE_META[previous_module],
+            "next_module": next_module, "next_module_meta": MODULE_META[next_module],
+            "before_challenge": True, "challenge_start_date": start_date,
+        })
     body, sleep, mental, social = _module_instances(day)
     rising_blocked = _rising_blocked(day)
     editing_meal = get_object_or_404(Meal, pk=request.GET["meal"], day=day) if module == "nutrition" and request.GET.get("meal") else None
@@ -393,13 +414,14 @@ def calendar_view(request, year=None, month=None):
     if month < 1 or month > 12:
         raise Http404("Mes invalido")
     cal = month_calendar.Calendar(firstweekday=0)
-    records = {d.date: d for d in __import__("dashboard.models", fromlist=["DayRecord"]).DayRecord.objects.filter(date__year=year, date__month=month)}
-    weeks = [[{"date": date, "record": records.get(date), "in_month": date.month == month} for date in week] for week in cal.monthdatescalendar(year, month)]
+    start_date = challenge_start_date()
+    records = {day.date: recalculate_day(day) for day in DayRecord.objects.filter(date__year=year, date__month=month)}
+    weeks = [[{"date": date, "record": records.get(date), "in_month": date.month == month, "before_challenge": date < start_date} for date in week] for week in cal.monthdatescalendar(year, month)]
     current = dt.date(year, month, 1)
     previous = current - dt.timedelta(days=1)
     next_month = (current.replace(day=28) + dt.timedelta(days=4)).replace(day=1)
     spanish_months = ("", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre")
-    return render(request, "dashboard/calendar.html", {"weeks": weeks, "year": year, "month": month, "month_name": spanish_months[month], "previous": previous, "next": next_month, "today": today})
+    return render(request, "dashboard/calendar.html", {"weeks": weeks, "year": year, "month": month, "month_name": spanish_months[month], "previous": previous, "next": next_month, "today": today, "challenge_start_date": start_date})
 
 
 def _period(request):
@@ -426,12 +448,14 @@ def _period(request):
 
 
 def dashboard_view(request):
-    from .models import DayRecord
     kind, start, end = _period(request)
-    days = list(DayRecord.objects.filter(date__range=(start, end)).order_by("date"))
+    challenge_start = challenge_start_date()
+    included_start = max(start, challenge_start)
+    days = [recalculate_day(day) for day in DayRecord.objects.filter(date__range=(included_start, end)).order_by("date")] if included_start <= end else []
     span = (end - start).days + 1
     previous_start, previous_end = start - dt.timedelta(days=span), start - dt.timedelta(days=1)
-    previous_days = list(DayRecord.objects.filter(date__range=(previous_start, previous_end)))
+    previous_included_start = max(previous_start, challenge_start)
+    previous_days = [recalculate_day(day) for day in DayRecord.objects.filter(date__range=(previous_included_start, previous_end))] if previous_included_start <= previous_end else []
     total = sum((day.final_value_h for day in days), Decimal("0"))
     total_mxn = sum((day.final_value_mxn for day in days), Decimal("0"))
     average = total / len(days) if days else Decimal("0")
@@ -488,6 +512,7 @@ def dashboard_view(request):
         "module_rows": module_rows, "adjustment_total": adjustment_total,
         "adjustment_total_mxn": adjustment_total_mxn, "config_changes": config_changes,
         "behavior_groups": behavior_groups,
+        "challenge_start_date": challenge_start,
     })
 
 
@@ -497,7 +522,9 @@ def settings_view(request):
         form = ConfigurationForm(request.POST, instance=current)
         if form.is_valid():
             form.save()
-            messages.success(request, "Nueva configuracion activa. El historial no fue recalculado.")
+            for day in DayRecord.objects.all().iterator():
+                recalculate_day(day)
+            messages.success(request, "Nueva configuración activa. La fecha del reto se aplicó al historial visible.")
             return redirect("dashboard:settings")
     else:
         form = ConfigurationForm(instance=current)

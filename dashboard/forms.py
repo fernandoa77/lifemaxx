@@ -204,16 +204,16 @@ class ConfigurationForm(StyledModelForm):
     class Meta:
         model = GlobalConfiguration
         fields = (
-            "hour_value_mxn", "calorie_goal", "protein_goal_g", "fat_priority", "muscle_priority", "social_priority",
+            "challenge_start_date", "hour_value_mxn", "calorie_goal", "protein_goal_g", "fat_priority", "muscle_priority", "social_priority",
             "height_cm", "birth_date", "biological_sex",
         )
         labels = {
-            "hour_value_mxn": "Valor de H (MXN)", "calorie_goal": "Objetivo calorico", "protein_goal_g": "Objetivo proteico (g)",
+            "challenge_start_date": "Fecha de inicio del reto", "hour_value_mxn": "Valor de H (MXN)", "calorie_goal": "Objetivo calorico", "protein_goal_g": "Objetivo proteico (g)",
             "fat_priority": "Prioridad de grasa", "muscle_priority": "Prioridad de musculo",
             "social_priority": "Prioridad de convivencia target", "height_cm": "Estatura fija (cm)",
             "birth_date": "Fecha de nacimiento", "biological_sex": "Sexo biologico (calculo energetico)",
         }
-        widgets = {"birth_date": forms.DateInput(attrs={"type": "date"})}
+        widgets = {"challenge_start_date": forms.DateInput(attrs={"type": "date"}), "birth_date": forms.DateInput(attrs={"type": "date"})}
 
     def save(self, commit=True):
         instance = super().save(commit=False)

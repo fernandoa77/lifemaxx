@@ -14,9 +14,10 @@
   </div>
   <div class="hero-grid">
     <div>
-      <p class="eyebrow">{{ day.date|date:'l' }} · {{ day.get_status_display }}</p>
+      <p class="eyebrow">{{ day.date|date:'l' }} · {% if before_challenge %}Fuera del reto{% else %}{{ day.get_status_display }}{% endif %}</p>
       <h1>{{ day.date|date:'d' }} <span>{{ day.date|date:'F Y' }}</span></h1>
-      {% if day.pending_reasons %}
+      {% if before_challenge %}<p class="challenge-date-note">El reto inicia el {{ challenge_start_date|date:'d M Y' }}</p>
+      {% elif day.pending_reasons %}
         <p class="provisional"><span></span> Balance provisional · {{ day.pending_reasons|length }} pendiente{{ day.pending_reasons|length|pluralize }}</p>
       {% else %}<p class="complete-label"><span></span> Captura completa</p>{% endif %}
     </div>
@@ -39,13 +40,15 @@
   <a class="module-card module-{{ card.key }}" href="{% url 'dashboard:module' day.date|date:'Y-m-d' card.key %}">
     <div class="card-top"><span class="module-index">0{{ forloop.counter }}</span><span class="pill">{{ card.eyebrow }}</span><span class="card-arrow">↗</span></div>
     <h3>{{ card.name }}</h3>
-    {% if card.key == 'body' %}
+    {% if before_challenge %}
+      <strong class="module-value">$0.00</strong><span class="module-hours">0.00H</span>
+    {% elif card.key == 'body' %}
       <strong class="module-value record-only">REGISTRO</strong>
     {% else %}
       <strong class="module-value {% if card.value > 0 %}positive{% elif card.value < 0 %}negative{% endif %}">{{ card.value_mxn|money }}</strong>
       <span class="module-hours">{{ card.value|signed }}H</span>
     {% endif %}
-    <div class="card-summary">
+    {% if not before_challenge %}<div class="card-summary">
       {% if card.key == 'body' %}
         <div><span>Peso AM</span><b>{{ card.breakdown.weight_am_kg|default:'—' }}{% if card.breakdown.weight_am_kg %} kg{% endif %}</b></div>
         <div><span>Peso PM</span><b>{{ card.breakdown.weight_pm_kg|default:'—' }}{% if card.breakdown.weight_pm_kg %} kg{% endif %}</b></div>
@@ -70,18 +73,18 @@
         <div><span>Bonificado</span><b>{% widthratio card.breakdown.rewarded_hours.family|add:card.breakdown.rewarded_hours.friends|add:card.breakdown.rewarded_hours.mixed_friends|add:card.breakdown.rewarded_hours.mixed_target|add:card.breakdown.rewarded_hours.target_friends 1 60 %} min</b></div>
         <div><span>Cercano semanal</span><b>{{ card.breakdown.weekly_close_hours|floatformat:1 }} / 2h</b></div><div><span>Mixto semanal</span><b>{{ card.breakdown.weekly_mixed_hours|floatformat:1 }} / 2h</b></div><div class="wide"><span>Prioridad</span><b>{{ day.configuration_snapshot.social_priority|upper }}</b></div>
       {% endif %}
-    </div>
-    <span class="open-label">ABRIR MODULO <b>→</b></span>
+    </div>{% endif %}
+    <span class="open-label">{% if before_challenge %}FUERA DEL RETO{% else %}ABRIR MODULO <b>→</b>{% endif %}</span>
   </a>
   {% endfor %}
 </section>
 
-<section class="adjustment-panel">
+{% if not before_challenge %}<section class="adjustment-panel">
   <div><p class="eyebrow">INTERVENCION MANUAL</p><h2>Ajuste marginal</h2></div>
   <form method="post" action="{% url 'dashboard:adjustment' day.date|date:'Y-m-d' %}">
     {% csrf_token %}
     <div class="inline-fields">{% for field in adjustment_form %}<label>{{ field.label }}{{ field }}{{ field.errors }}</label>{% endfor %}</div>
     <button class="button" type="submit">Guardar ajuste</button>
   </form>
-</section>
+</section>{% endif %}
 {% endblock %}

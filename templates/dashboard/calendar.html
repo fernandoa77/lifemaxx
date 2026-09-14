@@ -11,9 +11,9 @@
   <div class="week-labels"><span>LUN</span><span>MAR</span><span>MIE</span><span>JUE</span><span>VIE</span><span>SAB</span><span>DOM</span></div>
   <div class="calendar-grid">
   {% for week in weeks %}{% for cell in week %}
-    <a href="{% url 'dashboard:day' cell.date|date:'Y-m-d' %}" class="calendar-cell {% if not cell.in_month %}outside{% endif %} {% if cell.date == today %}today{% endif %} {% if cell.record.final_value_h > 0 %}positive-day{% elif cell.record.final_value_h < 0 %}negative-day{% elif cell.record %}neutral-day{% endif %}">
+    <a href="{% url 'dashboard:day' cell.date|date:'Y-m-d' %}" class="calendar-cell {% if not cell.in_month %}outside{% endif %} {% if cell.date == today %}today{% endif %} {% if cell.before_challenge %}pre-challenge{% elif cell.record.final_value_h > 0 %}positive-day{% elif cell.record.final_value_h < 0 %}negative-day{% elif cell.record %}neutral-day{% endif %}">
       <span class="day-number">{{ cell.date.day }}</span>
-      {% if cell.record %}<strong>{{ cell.record.final_value_mxn|money }}</strong><small>{{ cell.record.final_value_h|signed }}H</small><i class="record-status {{ cell.record.status }}"></i>{% else %}<em>Sin datos</em>{% endif %}
+      {% if cell.before_challenge %}<strong>$0.00</strong><small>0.00H</small>{% elif cell.record %}<strong>{{ cell.record.final_value_mxn|money }}</strong><small>{{ cell.record.final_value_h|signed }}H</small><i class="record-status {{ cell.record.status }}"></i>{% else %}<em>Sin datos</em>{% endif %}
     </a>
   {% endfor %}{% endfor %}
   </div>

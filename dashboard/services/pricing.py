@@ -44,6 +44,10 @@ def configuration_for_date(date):
     return active_configuration(end)
 
 
+def challenge_start_date():
+    return active_configuration().challenge_start_date
+
+
 @transaction.atomic
 def get_or_create_day(date):
     day = DayRecord.objects.filter(date=date).first()
@@ -358,6 +362,20 @@ def recalculate_day(day, *, save=True):
     h = day.hour_value_mxn
     values, breakdowns, pending = {}, {}, []
 
+    if day.date < challenge_start_date():
+        values = {key: D("0") for key in MODULE_KEYS}
+        day.module_values_h = {key: 0.0 for key in MODULE_KEYS}
+        day.module_breakdowns = {key: {"excluded_before_challenge": True} for key in MODULE_KEYS}
+        day.automatic_value_h = D("0")
+        day.adjustment_mxn = D("0")
+        day.final_value_h = D("0")
+        day.pending_reasons = []
+        day.status = DayRecord.Status.PROGRESS
+        day.calculated_at = timezone.now()
+        if save:
+            day.save(update_fields=("module_values_h", "module_breakdowns", "automatic_value_h", "adjustment_mxn", "final_value_h", "pending_reasons", "status", "calculated_at", "updated_at"))
+        return day
+
     values["body"] = D("0")
     body = getattr(day, "body", None)
     breakdowns["body"] = {
@@ -399,7 +417,10 @@ def recalculate_day(day, *, save=True):
     relations = {"sleep": "sleep", "mental": "mental", "social": "social"}
     for key, calculator in calculators.items():
         if key == "activity":
-            values[key], breakdowns[key] = calculator()
+            if states[key].captured or day.date == timezone.localdate():
+                values[key], breakdowns[key] = calculator()
+            else:
+                values[key], breakdowns[key] = D("0"), {**empty_breakdowns[key], "not_captured": True}
             if not states[key].captured:
                 breakdowns[key]["not_captured"] = True
                 pending.append(f"Falta capturar {states[key].get_module_display().lower()}")
@@ -454,5 +475,5 @@ def recalculate_social_week(date):
 
 
 def current_streak():
-    latest = MentalEntry.objects.filter(day__section_states__module="mental", day__section_states__captured=True).order_by("-day__date").first()
+    latest = MentalEntry.objects.filter(day__date__gte=challenge_start_date(), day__section_states__module="mental", day__section_states__captured=True).order_by("-day__date").first()
     return latest.resulting_streak if latest else 0

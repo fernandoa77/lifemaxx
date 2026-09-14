@@ -6,7 +6,9 @@
   <div class="breadcrumbs"><a href="{% url 'dashboard:day' day.date|date:'Y-m-d' %}">Dia</a><span>/</span>{{ meta.name }}</div>
   <div class="module-title-row">
     <div><p class="eyebrow">{{ meta.eyebrow }} · {{ day.date|date:'d M Y' }}</p><h1>{{ meta.name }}</h1></div>
-    {% if module == 'body' %}
+    {% if before_challenge %}
+      <div class="module-total"><span>FUERA DEL RETO</span><strong>$0.00</strong><small>0.00H</small></div>
+    {% elif module == 'body' %}
       <div class="module-total record-module"><span>TIPO DE MODULO</span><strong>REGISTRO</strong></div>
     {% else %}
       <div class="module-total"><span>VALOR MARGINAL</span><strong class="{% if module_value > 0 %}positive{% elif module_value < 0 %}negative{% endif %}">{{ module_value_mxn|money }}</strong><small>{{ module_value|signed }}H</small></div>
@@ -19,7 +21,9 @@
   <section class="capture-panel">
     <div class="panel-head"><div><p class="eyebrow">CAPTURA</p><h2>Datos del dia</h2></div><span class="save-indicator" data-save-indicator><i></i> Listo</span></div>
 
-    {% if module == 'body' %}
+    {% if before_challenge %}
+      <div class="challenge-lock"><p class="eyebrow">RETO SIN INICIAR</p><h2>Este día está fuera del periodo activo</h2><p>Los registros existentes permanecen guardados, pero están ocultos y no se contabilizan.</p><span>Inicio del reto · {{ challenge_start_date|date:'d M Y' }}</span></div>
+    {% elif module == 'body' %}
       <section class="body-section">
         <div class="body-section-head"><p class="eyebrow">MEDICIONES MANUALES</p><h3>Peso y panza</h3></div>
         <form method="post" data-autosave="true" class="inline-value-grid">{% csrf_token %}<input type="hidden" name="action" value="save-measurements">
@@ -57,7 +61,7 @@
     {% endif %}
   </section>
 
-  {% if module != 'body' %}<aside class="calculation-panel">
+  {% if module != 'body' and not before_challenge %}<aside class="calculation-panel">
     <div class="sticky-summary">
       <p class="eyebrow">CALCULO · {{ day.configuration_snapshot.pricing_versions|get_item:module }}</p><h2>Desglose</h2>
       {% if breakdown.not_captured or breakdown.incomplete %}<div class="pending-box">Captura pendiente</div>{% endif %}

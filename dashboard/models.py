@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -15,6 +16,10 @@ def default_pricing_versions():
         "mental": "mental-1.0",
         "social": "social-1.0",
     }
+
+
+def default_challenge_start_date():
+    return date(2026, 9, 13)
 
 
 class TimestampedModel(models.Model):
@@ -42,6 +47,7 @@ class GlobalConfiguration(TimestampedModel):
         PRIORITY = "priority", "Prioritaria"
 
     effective_from = models.DateTimeField(default=timezone.now, db_index=True)
+    challenge_start_date = models.DateField(default=default_challenge_start_date)
     hour_value_mxn = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("250.00"))
     calorie_goal = models.PositiveIntegerField(default=2200)
     protein_goal_g = models.PositiveIntegerField(default=160)
@@ -68,6 +74,7 @@ class GlobalConfiguration(TimestampedModel):
         return {
             "configuration_id": self.pk,
             "effective_from": self.effective_from.isoformat(),
+            "challenge_start_date": self.challenge_start_date.isoformat(),
             "hour_value_mxn": str(self.hour_value_mxn),
             "calorie_goal": self.calorie_goal,
             "protein_goal_g": self.protein_goal_g,
