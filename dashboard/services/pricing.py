@@ -138,7 +138,7 @@ def _base_energy(day, weight):
     profile = day.configuration_snapshot.get("body_profile") or {}
     height = D(str(profile.get("height_cm") or 0))
     birth = profile.get("birth_date")
-    if not weight or not height or not birth:
+    if not weight or not height or not birth or profile.get("biological_sex") not in ("male", "female"):
         return D("0")
     birth_date = dt.date.fromisoformat(birth)
     age = day.date.year - birth_date.year - ((day.date.month, day.date.day) < (birth_date.month, birth_date.day))

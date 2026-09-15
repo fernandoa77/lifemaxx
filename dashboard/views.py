@@ -22,7 +22,7 @@ from .models import Activity, BodyEntry, BodyPhoto, DayRecord, GlobalConfigurati
 from .services.ai import AIUnavailable, BODY_SCHEMA, MEAL_SCHEMA, request_structured_json
 from .services.imagekit import ImageKitError, delete_photo, upload_body_photo
 from .services.pricing import (
-    MODULE_KEYS, active_configuration, challenge_start_date, get_or_create_day, json_safe, recalculate_day,
+    MODULE_KEYS, _latest_weight, active_configuration, challenge_start_date, get_or_create_day, json_safe, recalculate_day,
     recalculate_mental_from, recalculate_social_week, record_revision,
 )
 
@@ -74,6 +74,16 @@ def _calorie_balance(day):
     base = Decimal(str(activity.get("base_kcal") or 0))
     active = Decimal(str(activity.get("active_kcal") or 0))
     total = base + active
+    profile = (day.configuration_snapshot or {}).get("body_profile") or {}
+    missing_base_fields = []
+    if not _latest_weight(day):
+        missing_base_fields.append("peso AM")
+    if not profile.get("height_cm"):
+        missing_base_fields.append("estatura")
+    if not profile.get("birth_date"):
+        missing_base_fields.append("fecha de nacimiento")
+    if profile.get("biological_sex") not in ("male", "female"):
+        missing_base_fields.append("sexo biológico")
     available = base > 0 and not nutrition.get("not_captured") and not activity.get("not_captured")
     difference = total - consumed if available else None
     return {
@@ -81,6 +91,9 @@ def _calorie_balance(day):
         "difference": difference, "available": available,
         "status": "deficit" if difference is not None and difference > 0 else "surplus" if difference is not None and difference < 0 else "balance" if difference is not None else "pending",
         "missing_base": base <= 0,
+        "missing_base_fields": missing_base_fields,
+        "missing_weight": "peso AM" in missing_base_fields,
+        "missing_profile": any(field != "peso AM" for field in missing_base_fields),
         "missing_nutrition": bool(nutrition.get("not_captured")),
         "missing_activity": bool(activity.get("not_captured")),
     }

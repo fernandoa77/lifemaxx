@@ -50,6 +50,18 @@ h2 { margin-bottom: 0; font-size: 25px; letter-spacing: -.035em; }
 .hero-grid { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 40px; }
 .provisional, .complete-label { margin: 22px 0 0; color: var(--amber); font-size: 12px; }
 .provisional span, .complete-label span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: 8px; }
+.pending-details { position: relative; width: fit-content; max-width: 100%; }
+.pending-details summary { width: fit-content; max-width: 100%; cursor: pointer; list-style: none; }
+.pending-details summary::-webkit-details-marker { display: none; }
+.pending-details summary:hover { color: #ffd486; }
+.pending-details summary:focus-visible { outline: 2px solid var(--amber); outline-offset: 5px; border-radius: 3px; }
+.pending-details .pending-chevron { width: auto; height: auto; margin: 0 0 0 5px; background: none; font-size: 16px; vertical-align: -1px; transition: transform .2s ease; }
+.pending-details[open] .pending-chevron { transform: rotate(180deg); }
+.pending-panel { width: min(390px, calc(100vw - 48px)); margin-top: 12px; padding: 16px 18px; color: var(--text); background: var(--surface-2); border: 1px solid #4a3c29; border-radius: 10px; box-shadow: 0 12px 35px #0005; font-size: 12px; }
+.pending-panel strong { display: block; margin-bottom: 10px; font-size: 12px; }
+.pending-panel ul { margin: 0; padding-left: 19px; }
+.pending-panel li + li { margin-top: 8px; }
+.pending-panel li::marker { color: var(--amber); }
 .complete-label { color: var(--lime); }
 .balance-block { min-width: 320px; text-align: right; }
 .balance-block > span, .module-total > span { display: block; color: var(--muted); font: 9px DM Mono, monospace; letter-spacing: .15em; }
@@ -251,7 +263,6 @@ h2 { font-size: 27px; line-height: 1.12; }
 .calorie-balance-card { margin-top: 20px; padding: 24px; border: 1px solid #3b4651; border-radius: 14px; background: linear-gradient(135deg,#17202a,#11151b 75%); }
 .calorie-balance-heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
 .calorie-balance-heading h2 { margin: 4px 0 0; font-size: 24px; }
-.calorie-balance-heading > span { color: var(--cyan); font-size: 12px; font-weight: 700; }
 .calorie-balance-metrics { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; }
 .calorie-balance-metrics > div { min-width: 0; padding: 16px; border: 1px solid #313d48; border-radius: 10px; background: #0e141b; }
 .calorie-balance-metrics span,.calorie-balance-metrics small { display: block; color: #a9b4bf; font-size: 12px; }
@@ -263,7 +274,6 @@ h2 { font-size: 27px; line-height: 1.12; }
 .calorie-balance-result strong { color: var(--lime); font-size: 20px; text-align: right; }
 .calorie-balance-result.surplus strong { color: var(--red); }
 .calorie-balance-result.pending strong,.calorie-balance-result.balance strong { color: var(--text); }
-.calorie-balance-note { margin: 14px 0 0; color: #aab4bf; font-size: 12px; line-height: 1.5; }
 .calorie-balance-links { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; }
 .calorie-balance-links a { color: var(--cyan); font-size: 12px; font-weight: 700; text-decoration: underline; }
 .module-card .card-summary span { font-size: 12px; }

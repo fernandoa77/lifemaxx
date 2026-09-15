@@ -18,7 +18,13 @@
       <h1>{{ day.date|date:'d' }} <span>{{ day.date|date:'F Y' }}</span></h1>
       {% if before_challenge %}<p class="challenge-date-note">El reto inicia el {{ challenge_start_date|date:'d M Y' }}</p>
       {% elif day.pending_reasons %}
-        <p class="provisional"><span></span> Balance provisional · {{ day.pending_reasons|length }} pendiente{{ day.pending_reasons|length|pluralize }}</p>
+        <details class="pending-details">
+          <summary class="provisional"><span></span> Balance provisional · {{ day.pending_reasons|length }} pendiente{{ day.pending_reasons|length|pluralize }} <span class="pending-chevron" aria-hidden="true">⌄</span></summary>
+          <div class="pending-panel">
+            <strong>Qué falta para cerrar el día</strong>
+            <ul>{% for reason in day.pending_reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+          </div>
+        </details>
       {% else %}<p class="complete-label"><span></span> Captura completa</p>{% endif %}
     </div>
     <div class="balance-block">
