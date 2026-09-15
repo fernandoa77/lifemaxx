@@ -14,8 +14,20 @@
       <div class="module-total"><span>VALOR MARGINAL</span><strong class="{% if module_value > 0 %}positive{% elif module_value < 0 %}negative{% endif %}">{{ module_value_mxn|money }}</strong><small>{{ module_value|signed }}H</small></div>
     {% endif %}
   </div>
-  <div class="module-day-nav"><a href="{% url 'dashboard:module' day.date|date:'Y-m-d' previous_module %}">← {{ previous_module_meta.name }}</a><a href="{% url 'dashboard:day' day.date|date:'Y-m-d' %}">Vista del día</a><a href="{% url 'dashboard:module' day.date|date:'Y-m-d' next_module %}">{{ next_module_meta.name }} →</a></div>
+  <nav class="module-day-nav" aria-label="Navegar entre módulos"><a href="{% url 'dashboard:module' day.date|date:'Y-m-d' previous_module %}" aria-label="Módulo anterior: {{ previous_module_meta.name }}">← <span>{{ previous_module_meta.name }}</span></a><a class="day-summary-link" href="{% url 'dashboard:day' day.date|date:'Y-m-d' %}">Resumen del día</a><a href="{% url 'dashboard:module' day.date|date:'Y-m-d' next_module %}" aria-label="Módulo siguiente: {{ next_module_meta.name }}"><span>{{ next_module_meta.name }}</span> →</a></nav>
 </header>
+
+{% if module == 'nutrition' and not before_challenge %}
+<section class="nutrition-overview" aria-label="Resumen de nutrición del día">
+  <div class="nutrition-overview-head"><div><p class="eyebrow">NUTRICIÓN · HOY</p><h2>Tu avance del día</h2></div><span>{{ breakdown.meal_count|default:0 }} comida{{ breakdown.meal_count|default:0|pluralize }}</span></div>
+  <div class="nutrition-progress-grid">
+    <div class="nutrition-progress"><div><span>Calorías consumidas</span><strong>{{ breakdown.calories|floatformat:0 }} <small>/ {{ breakdown.calorie_goal }} kcal</small></strong></div><div class="meter" role="progressbar" aria-label="Calorías consumidas" aria-valuenow="{{ breakdown.calories|floatformat:0 }}" aria-valuemin="0" aria-valuemax="{{ breakdown.calorie_goal }}"><i style="width:{{ breakdown.calories|pct:breakdown.calorie_goal }}%"></i></div></div>
+    <div class="nutrition-progress"><div><span>Proteína</span><strong>{{ breakdown.protein|floatformat:0 }} <small>/ {{ breakdown.protein_goal_g }} g</small></strong></div><div class="meter protein" role="progressbar" aria-label="Proteína consumida" aria-valuenow="{{ breakdown.protein|floatformat:0 }}" aria-valuemin="0" aria-valuemax="{{ breakdown.protein_goal_g }}"><i style="width:{{ breakdown.protein|pct:breakdown.protein_goal_g }}%"></i></div></div>
+  </div>
+  <p class="nutrition-goal-note">La meta de calorías es fija para este día. El ejercicio aumenta el gasto estimado en Actividad, pero no sube automáticamente este límite.</p>
+</section>
+{% include 'dashboard/partials/calorie_balance.html' %}
+{% endif %}
 
 <div class="module-layout module-{{ module }} {% if module == 'body' %}body-layout{% endif %}">
   <section class="capture-panel">

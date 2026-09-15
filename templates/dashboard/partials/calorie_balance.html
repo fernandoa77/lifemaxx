@@ -1,0 +1,17 @@
+{% load dashboard_extras %}
+<section class="calorie-balance-card" aria-label="Balance energético del día">
+  <div class="calorie-balance-heading"><div><p class="eyebrow">ENERGÍA DEL DÍA</p><h2>¿Déficit o superávit?</h2></div><span>Estimación</span></div>
+  <div class="calorie-balance-metrics">
+    <div><span>Consumidas</span><strong>{{ calorie_balance.consumed|floatformat:0 }}</strong><small>kcal</small></div>
+    <div><span>Gasto base</span><strong>{% if calorie_balance.missing_base %}—{% else %}{{ calorie_balance.base|floatformat:0 }}{% endif %}</strong><small>kcal estimadas</small></div>
+    <div><span>Gasto activo</span><strong>{% if calorie_balance.missing_activity %}—{% else %}{{ calorie_balance.active|floatformat:0 }}{% endif %}</strong><small>kcal registradas</small></div>
+    <div><span>Gasto total</span><strong>{% if calorie_balance.available %}{{ calorie_balance.total|floatformat:0 }}{% else %}—{% endif %}</strong><small>base + activo</small></div>
+  </div>
+  {% if calorie_balance.available %}
+    <div class="calorie-balance-result {{ calorie_balance.status }}"><span>Gasto total − consumidas</span><strong>{% if calorie_balance.status == 'deficit' %}Déficit{% elif calorie_balance.status == 'surplus' %}Superávit{% else %}Equilibrio{% endif %} · {{ calorie_balance.difference|absnum|floatformat:0 }} kcal</strong></div>
+  {% else %}
+    <div class="calorie-balance-result pending"><span>Balance pendiente</span><strong>{% if calorie_balance.missing_base %}Faltan datos para estimar el gasto base{% elif calorie_balance.missing_nutrition %}Registra una comida para calcularlo{% else %}Registra tu actividad para calcularlo{% endif %}</strong></div>
+  {% endif %}
+  <p class="calorie-balance-note">El gasto base usa tu perfil corporal y peso; el activo suma las actividades registradas. La diferencia es una estimación, no cambia tu meta calórica fija de Nutrición.</p>
+  {% if not calorie_balance.available %}<div class="calorie-balance-links">{% if calorie_balance.missing_base %}<a href="{% url 'dashboard:settings' %}">Revisar perfil</a><a href="{% url 'dashboard:module' day.date|date:'Y-m-d' 'body' %}">Registrar peso</a>{% elif calorie_balance.missing_nutrition %}<a href="{% url 'dashboard:module' day.date|date:'Y-m-d' 'nutrition' %}">Ir a Nutrición</a>{% else %}<a href="{% url 'dashboard:module' day.date|date:'Y-m-d' 'activity' %}">Ir a Actividad</a>{% endif %}</div>{% endif %}
+</section>

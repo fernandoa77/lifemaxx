@@ -67,6 +67,25 @@ def _saved_response(request, day, module, message="Guardado"):
     return redirect("dashboard:module", date=day.date.isoformat(), module=module)
 
 
+def _calorie_balance(day):
+    nutrition = (day.module_breakdowns or {}).get("nutrition", {})
+    activity = (day.module_breakdowns or {}).get("activity", {})
+    consumed = Decimal(str(nutrition.get("calories") or 0))
+    base = Decimal(str(activity.get("base_kcal") or 0))
+    active = Decimal(str(activity.get("active_kcal") or 0))
+    total = base + active
+    available = base > 0 and not nutrition.get("not_captured") and not activity.get("not_captured")
+    difference = total - consumed if available else None
+    return {
+        "consumed": consumed, "base": base, "active": active, "total": total,
+        "difference": difference, "available": available,
+        "status": "deficit" if difference is not None and difference > 0 else "surplus" if difference is not None and difference < 0 else "balance" if difference is not None else "pending",
+        "missing_base": base <= 0,
+        "missing_nutrition": bool(nutrition.get("not_captured")),
+        "missing_activity": bool(activity.get("not_captured")),
+    }
+
+
 def home(request):
     return redirect("dashboard:day", date=timezone.localdate().isoformat())
 
@@ -87,6 +106,7 @@ def day_detail(request, date):
     adjustment_form = AdjustmentForm(initial={"adjustment_h": day.adjustment_h, "adjustment_justification": day.adjustment_justification})
     return render(request, "dashboard/day.html", {
         "day": day, "cards": cards, "adjustment_form": adjustment_form,
+        "calorie_balance": _calorie_balance(day),
         "previous_date": day.date - dt.timedelta(days=1), "next_date": day.date + dt.timedelta(days=1),
         "before_challenge": before_challenge, "challenge_start_date": start_date,
     })
@@ -197,6 +217,7 @@ def _module_render(request, day, module, bound_form=None):
     context = {
         "day": day, "module": module, "meta": MODULE_META[module], "form": forms[module], "state": state,
         "breakdown": day.module_breakdowns.get(module, {}), "module_value": module_value,
+        "calorie_balance": _calorie_balance(day),
         "module_value_mxn": (module_value * day.hour_value_mxn).quantize(Decimal("0.01")),
         "previous_module": previous_module, "previous_module_meta": MODULE_META[previous_module],
         "next_module": next_module, "next_module_meta": MODULE_META[next_module],

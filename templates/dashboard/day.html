@@ -30,6 +30,8 @@
   </div>
 </section>
 
+{% if not before_challenge %}{% include 'dashboard/partials/calorie_balance.html' %}{% endif %}
+
 <section class="section-heading">
   <div><p class="eyebrow">SEIS ÁREAS · UNA LECTURA</p><h2>Tu día, por módulo</h2></div>
   <span class="save-state"><i></i> Datos sincronizados</span>

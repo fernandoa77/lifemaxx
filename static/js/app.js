@@ -237,6 +237,26 @@
   document.querySelectorAll('.entry-dialog').forEach((dialog) => dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); }));
   document.querySelectorAll('.meal-photo-dialog').forEach((dialog) => dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); }));
 
+  const mealDeleteDialog = document.getElementById('mealDeleteDialog');
+  let mealFormToDelete = null;
+  let mealDeleteConfirmed = false;
+  document.querySelectorAll('[data-delete-meal-form]').forEach((form) => form.addEventListener('submit', (event) => {
+    if (mealDeleteConfirmed) return;
+    event.preventDefault();
+    mealFormToDelete = form;
+    const name = mealDeleteDialog?.querySelector('[data-delete-meal-name]');
+    if (name) name.textContent = form.dataset.mealDescription;
+    mealDeleteDialog?.showModal();
+  }));
+  mealDeleteDialog?.querySelectorAll('[data-cancel-meal-delete]').forEach((button) => button.addEventListener('click', () => mealDeleteDialog.close()));
+  mealDeleteDialog?.addEventListener('close', () => { mealFormToDelete = null; mealDeleteConfirmed = false; });
+  mealDeleteDialog?.addEventListener('click', (event) => { if (event.target === mealDeleteDialog) mealDeleteDialog.close(); });
+  mealDeleteDialog?.querySelector('[data-confirm-meal-delete]')?.addEventListener('click', () => {
+    if (!mealFormToDelete) return;
+    mealDeleteConfirmed = true;
+    mealFormToDelete.requestSubmit();
+  });
+
   const activityCategory = activityDialog?.querySelector('[name="category"]');
   const activityAmount = activityDialog?.querySelector('[name="amount"]');
   const activityAmountLabel = activityDialog?.querySelector('[data-activity-amount-label]');
