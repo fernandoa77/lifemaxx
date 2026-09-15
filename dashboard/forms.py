@@ -216,7 +216,10 @@ class ConfigurationForm(StyledModelForm):
             "social_priority": "Prioridad de convivencia target", "height_cm": "Estatura fija (cm)",
             "birth_date": "Fecha de nacimiento", "biological_sex": "Sexo biológico (cálculo energético)",
         }
-        widgets = {"challenge_start_date": forms.DateInput(attrs={"type": "date"}), "birth_date": forms.DateInput(attrs={"type": "date"})}
+        widgets = {
+            "challenge_start_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "birth_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+        }
 
     def save(self, commit=True):
         instance = super().save(commit=False)

@@ -693,6 +693,11 @@ def settings_view(request):
             messages.success(request, "Nueva configuración activa. Se actualizó el día de hoy sin modificar días anteriores.")
             return redirect("dashboard:settings")
     else:
-        form = ConfigurationForm(instance=current)
+        initial = {}
+        if current.birth_date is None:
+            previous_birth_date = GlobalConfiguration.objects.filter(birth_date__isnull=False).order_by("-effective_from", "-pk").values_list("birth_date", flat=True).first()
+            if previous_birth_date:
+                initial["birth_date"] = previous_birth_date
+        form = ConfigurationForm(instance=current, initial=initial)
     history = GlobalConfiguration.objects.order_by("-effective_from")[:12]
     return render(request, "dashboard/settings.html", {"form": form, "current": current, "history": history})
