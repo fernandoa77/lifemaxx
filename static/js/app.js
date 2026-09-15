@@ -244,11 +244,11 @@
   const syncActivityAmount = () => {
     const quantity = {steps: ['Cantidad de pasos', 'pasos'], pushups: ['Cantidad de lagartijas', 'repeticiones']};
     const duration = {functional_moderate: 'Funcional moderado', functional_intense: 'Funcional intenso', gym: 'Gimnasio'};
-    const config = quantity[activityCategory?.value] || (duration[activityCategory?.value] ? ['Duración', 'minutos'] : ['Tiempo o cantidad', 'Selecciona el tipo de actividad']);
+    const config = quantity[activityCategory?.value] || (duration[activityCategory?.value] ? ['Duración (minutos)', 'Ingresa la duración en minutos'] : ['Tiempo o cantidad', 'Selecciona el tipo de actividad']);
     if (activityAmountLabel) activityAmountLabel.textContent = config[0];
     if (activityUnit) activityUnit.textContent = config[1];
     if (activityAmount) {
-      activityAmount.placeholder = quantity[activityCategory?.value] ? '0' : 'Minutos';
+      activityAmount.placeholder = duration[activityCategory?.value] ? '' : '0';
       activityAmount.step = quantity[activityCategory?.value] ? '1' : '0.01';
     }
   };

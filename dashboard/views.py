@@ -647,10 +647,16 @@ def settings_view(request):
     if request.method == "POST":
         form = ConfigurationForm(request.POST, instance=current)
         if form.is_valid():
-            form.save()
-            for day in DayRecord.objects.all().iterator():
-                recalculate_day(day)
-            messages.success(request, "Nueva configuración activa. La fecha del reto se aplicó al historial visible.")
+            with transaction.atomic():
+                configuration = form.save()
+                today = DayRecord.objects.select_for_update().filter(date=timezone.localdate()).first()
+                if today:
+                    previous = model_to_dict(today)
+                    today.configuration_snapshot = configuration.snapshot()
+                    today.save(update_fields=("configuration_snapshot", "updated_at"))
+                    record_revision(today, previous, "Configuración universal actualizada para el día en curso")
+                    recalculate_day(today)
+            messages.success(request, "Nueva configuración activa. Se actualizó el día de hoy sin modificar días anteriores.")
             return redirect("dashboard:settings")
     else:
         form = ConfigurationForm(instance=current)
