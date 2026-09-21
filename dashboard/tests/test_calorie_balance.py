@@ -3,14 +3,14 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.test import SimpleTestCase, TestCase
+from django.test import TestCase
 from django.urls import reverse
 
 from dashboard.views import _calorie_balance
 from dashboard.services.pricing import _base_energy
 
 
-class CalorieBalanceTests(SimpleTestCase):
+class CalorieBalanceTests(TestCase):
     def test_unspecified_sex_does_not_assume_a_base_expenditure(self):
         day = SimpleNamespace(date=dt.date(2026, 9, 14), configuration_snapshot={
             "body_profile": {"height_cm": "170", "birth_date": "1990-01-01", "biological_sex": "unspecified"},

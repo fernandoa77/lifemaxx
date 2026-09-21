@@ -134,8 +134,23 @@ def _latest_weight(day):
     return D(prior.body.weight_am_kg) if prior else D("0")
 
 
+def body_profile_for_day(day):
+    """Complete missing legacy day-profile fields without replacing recorded values."""
+    profile = ((day.configuration_snapshot or {}).get("body_profile") or {}).copy()
+    if profile.get("height_cm") and profile.get("birth_date") and profile.get("biological_sex") in ("male", "female"):
+        return profile
+    current = active_configuration()
+    if not profile.get("height_cm") and current.height_cm is not None:
+        profile["height_cm"] = str(current.height_cm)
+    if not profile.get("birth_date") and current.birth_date:
+        profile["birth_date"] = current.birth_date.isoformat()
+    if profile.get("biological_sex") not in ("male", "female") and current.biological_sex in ("male", "female"):
+        profile["biological_sex"] = current.biological_sex
+    return profile
+
+
 def _base_energy(day, weight):
-    profile = day.configuration_snapshot.get("body_profile") or {}
+    profile = body_profile_for_day(day)
     height = D(str(profile.get("height_cm") or 0))
     birth = profile.get("birth_date")
     if not weight or not height or not birth or profile.get("biological_sex") not in ("male", "female"):
@@ -417,11 +432,10 @@ def recalculate_day(day, *, save=True):
     relations = {"sleep": "sleep", "mental": "mental", "social": "social"}
     for key, calculator in calculators.items():
         if key == "activity":
-            if states[key].captured or day.date == timezone.localdate():
-                values[key], breakdowns[key] = calculator()
-            else:
-                values[key], breakdowns[key] = D("0"), {**empty_breakdowns[key], "not_captured": True}
+            values[key], breakdowns[key] = calculator()
             if not states[key].captured:
+                if day.date != timezone.localdate():
+                    values[key] = D("0")
                 breakdowns[key]["not_captured"] = True
                 pending.append(f"Falta capturar {states[key].get_module_display().lower()}")
             continue

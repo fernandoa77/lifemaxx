@@ -22,7 +22,7 @@ from .models import Activity, BodyEntry, BodyPhoto, DayRecord, GlobalConfigurati
 from .services.ai import AIUnavailable, BODY_SCHEMA, MEAL_SCHEMA, request_structured_json
 from .services.imagekit import ImageKitError, delete_photo, upload_body_photo
 from .services.pricing import (
-    MODULE_KEYS, _latest_weight, active_configuration, challenge_start_date, get_or_create_day, json_safe, recalculate_day,
+    MODULE_KEYS, _latest_weight, active_configuration, body_profile_for_day, challenge_start_date, get_or_create_day, json_safe, recalculate_day,
     recalculate_mental_from, recalculate_social_week, record_revision,
 )
 
@@ -74,7 +74,7 @@ def _calorie_balance(day):
     base = Decimal(str(activity.get("base_kcal") or 0))
     active = Decimal(str(activity.get("active_kcal") or 0))
     total = base + active
-    profile = (day.configuration_snapshot or {}).get("body_profile") or {}
+    profile = body_profile_for_day(day)
     missing_base_fields = []
     if not _latest_weight(day):
         missing_base_fields.append("peso AM")

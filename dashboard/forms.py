@@ -221,6 +221,18 @@ class ConfigurationForm(StyledModelForm):
             "birth_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["height_cm"].required = True
+        self.fields["birth_date"].required = True
+        self.fields["biological_sex"].required = True
+
+    def clean_biological_sex(self):
+        value = self.cleaned_data["biological_sex"]
+        if value not in ("male", "female"):
+            raise forms.ValidationError("Selecciona masculino o femenino para calcular el gasto energético.")
+        return value
+
     def save(self, commit=True):
         instance = super().save(commit=False)
         instance.pk = None
