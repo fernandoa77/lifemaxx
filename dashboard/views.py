@@ -19,7 +19,7 @@ from .forms import (
     SocialForm, SupplementForm,
 )
 from .models import Activity, BodyEntry, BodyPhoto, DayRecord, GlobalConfiguration, Meal, MentalEntry, SectionState, SleepEntry, SocialEntry, SourceSubmission, Supplement
-from .services.ai import AIUnavailable, BODY_SCHEMA, MEAL_SCHEMA, request_structured_json
+from .services.ai import AIUnavailable, BODY_SCHEMA, MEAL_SCHEMA, request_structured_json, transcribe_audio
 from .services.imagekit import ImageKitError, delete_photo, upload_body_photo
 from .services.pricing import (
     MODULE_KEYS, _latest_weight, active_configuration, body_profile_for_day, challenge_start_date, get_or_create_day, json_safe, recalculate_day,
@@ -328,6 +328,13 @@ def _module_post(request, day, module):
         return _save_singleton(request, day, module, BodyEntry, BodyMeasurementsForm)
 
     if module == "nutrition":
+        if action == "meal-transcribe":
+            try:
+                return JsonResponse({"ok": True, "text": transcribe_audio(request.FILES.get("audio"))})
+            except ValueError as exc:
+                return JsonResponse({"ok": False, "error": str(exc)}, status=422)
+            except AIUnavailable as exc:
+                return JsonResponse({"ok": False, "error": str(exc)}, status=503)
         if action == "meal-ai-preview":
             return _preview_meal_ai(request, day)
         if action == "notes":

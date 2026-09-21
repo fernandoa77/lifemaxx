@@ -28,9 +28,16 @@
     {% if not editing_meal %}<div class="entry-mode-tabs"><button type="button" class="active" data-meal-mode="manual">Ingresar manualmente</button><button type="button" data-meal-mode="ai">Generar con IA</button></div>{% endif %}
 
     <section class="ai-intake" data-ai-intake {% if not editing_meal %}hidden{% endif %}>
-      <label class="field"><span>Describe la comida</span><textarea class="control" rows="4" name="ai_description" placeholder="Ej. dos tacos de bistec con aguacate y una coca de 355 ml"></textarea></label>
+      <div class="entry-mode-tabs meal-source-tabs" aria-label="Cómo ingresar la receta"><button type="button" class="active" data-meal-source="text" aria-pressed="true">Escribir</button><button type="button" data-meal-source="voice" aria-pressed="false">Dictado</button><button type="button" data-meal-source="image" aria-pressed="false">Imagen</button></div>
+      <div class="meal-dictation" data-meal-dictation hidden>
+        <p>Dicta la receta, sus ingredientes y cantidades. Podrás corregir el texto antes de procesarlo.</p>
+        <button class="button secondary" type="button" data-record-meal>Iniciar dictado</button>
+        <button class="button secondary" type="button" data-retry-dictation hidden>Reintentar transcripción</button>
+        <p class="dictation-status" data-dictation-status role="status" aria-live="polite">Máximo 3 minutos por dictado.</p>
+      </div>
+      <label class="field"><span>Receta o descripción de la comida</span><textarea class="control" rows="4" name="ai_description" placeholder="Ej. dos tacos de bistec con aguacate y una coca de 355 ml"></textarea></label>
       <label class="meal-image-drop" data-meal-image-drop><input type="file" name="photo" accept="image/*" data-meal-photo><strong>Adjuntar o pegar imagen</strong><small data-meal-file>Seleccionar archivo · Ctrl + V</small></label>
-      <button class="button ai" type="button" data-generate-meal>✦ Generar vista previa</button><p class="ai-inline-status" data-ai-status></p>
+      <button class="button ai" type="button" data-generate-meal>✦ Generar vista previa</button><p class="ai-inline-status" data-ai-status role="status" aria-live="polite"></p>
     </section>
 
     <section class="meal-editor" data-meal-editor>

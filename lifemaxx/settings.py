@@ -120,6 +120,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 OPENROUTER_API_KEY = config("OPENROUTER_API_KEY", default="")
 OPENROUTER_BASE_URL = config("OPENROUTER_BASE_URL", default="https://openrouter.ai/api/v1")
 OPENROUTER_MODEL = config("OPENROUTER_MODEL", default="")
+OPENROUTER_TRANSCRIPTION_MODEL = config("OPENROUTER_TRANSCRIPTION_MODEL", default="openai/whisper-large-v3")
 OPENROUTER_FALLBACK_MODELS = config("OPENROUTER_FALLBACK_MODELS", default="", cast=Csv())
 OPENROUTER_HTTP_REFERER = config("OPENROUTER_HTTP_REFERER", default="")
 OPENROUTER_APP_TITLE = config("OPENROUTER_APP_TITLE", default="LifeMaxx")

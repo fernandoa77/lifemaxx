@@ -29,7 +29,13 @@ OPENROUTER_MODEL=proveedor/modelo-compatible-con-json-schema
 OPENROUTER_FALLBACK_MODELS=
 ```
 
-Toda integracion de IA pasa por `dashboard/services/ai.py::request_structured_json`. La funcion acepta prompt, contexto, imagenes y un JSON Schema por modulo; solicita `response_format=json_schema` con modo estricto y bloquea propiedades adicionales. Nutricion y progreso corporal ya la reutilizan.
+La extracción estructurada pasa por `dashboard/services/ai.py::request_structured_json`. La funcion acepta prompt, contexto, imagenes y un JSON Schema por modulo; solicita `response_format=json_schema` con modo estricto y bloquea propiedades adicionales. Nutricion y progreso corporal ya la reutilizan.
+
+En **Nueva comida → Generar con IA** puedes escribir, dictar una receta o adjuntar una imagen. El dictado usa `transcribe_audio` con Whisper por el endpoint `/audio/transcriptions` de OpenRouter y la misma `OPENROUTER_API_KEY`. El modelo se puede configurar con `OPENROUTER_TRANSCRIPTION_MODEL` (por defecto `openai/whisper-large-v3`). No requiere otra clave ni instalar Whisper en el servidor.
+
+El micrófono requiere HTTPS (o localhost), permiso del navegador y soporte de MediaRecorder. Cada grabación dura hasta 3 minutos; el servidor acepta hasta 10 MB. Al detenerla, el texto se agrega a la descripción para revisarlo y luego generar la vista previa nutricional con el modelo `OPENROUTER_MODEL` (debe admitir imágenes para analizar fotos). El audio no se guarda en los modelos ni en el almacenamiento de medios; si falla la transcripción se conserva temporalmente en el navegador para reintentar. La comida solo se guarda al confirmar **Agregar comida**.
+
+Contrato del proveedor: [Speech-to-Text de OpenRouter](https://openrouter.ai/docs/guides/overview/multimodal/stt).
 
 ## Fotografias corporales en ImageKit
 

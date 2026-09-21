@@ -280,7 +280,131 @@
   const mealEditor = mealForm?.querySelector('[data-meal-editor]');
   const previewLabel = mealForm?.querySelector('[data-preview-label]');
   const aiGenerated = mealForm?.querySelector('[data-ai-generated]');
+  const recordButton = mealForm?.querySelector('[data-record-meal]');
+  const retryDictation = mealForm?.querySelector('[data-retry-dictation]');
+  const dictationStatus = mealForm?.querySelector('[data-dictation-status]');
+  const generateMeal = mealForm?.querySelector('[data-generate-meal]');
+  let recorder = null, microphone = null, recordingTimer = null, audioBlob = null;
+  let mealGenerating = false;
+  let dictationBusy = false, dictationSession = 0, transcriptionController = null;
+  const releaseMicrophone = () => {
+    clearInterval(recordingTimer);
+    microphone?.getTracks().forEach((track) => track.stop());
+    microphone = null;
+  };
+  const setDictationBusy = (busy) => {
+    dictationBusy = busy;
+    if (generateMeal) generateMeal.disabled = busy || mealGenerating;
+    mealForm?.querySelectorAll('[type="submit"], [data-meal-source]').forEach((button) => { button.disabled = busy; });
+    mealForm?.querySelector('[name="ai_description"]')?.toggleAttribute('readonly', busy);
+  };
+  const cancelDictation = () => {
+    dictationSession++;
+    transcriptionController?.abort();
+    if (recorder?.state === 'recording') recorder.stop();
+    releaseMicrophone();
+    recorder = null;
+    setDictationBusy(false);
+    if (recordButton) { recordButton.disabled = mealGenerating; recordButton.textContent = 'Iniciar dictado'; }
+    if (dictationStatus) dictationStatus.textContent = 'Máximo 3 minutos por dictado.';
+  };
+  mealDialog?.addEventListener('close', cancelDictation);
+  window.addEventListener('pagehide', cancelDictation);
+  mealForm?.addEventListener('submit', (event) => { if (dictationBusy) event.preventDefault(); });
+  const transcribeRecording = async (session) => {
+    if (!audioBlob || session !== dictationSession) return;
+    setDictationBusy(true);
+    recordButton.disabled = true;
+    retryDictation.hidden = true;
+    dictationStatus.textContent = 'Transcribiendo dictado…';
+    const payload = new FormData();
+    payload.set('csrfmiddlewaretoken', mealForm.elements.csrfmiddlewaretoken.value);
+    payload.set('action', 'meal-transcribe');
+    payload.set('audio', audioBlob, 'dictado');
+    transcriptionController = new AbortController();
+    const timeout = setTimeout(() => transcriptionController?.abort(), 100000);
+    try {
+      const response = await fetch(location.href, {method: 'POST', body: payload, signal: transcriptionController.signal, headers: {'X-Requested-With': 'XMLHttpRequest'}});
+      const result = await response.json();
+      if (!response.ok || !result.ok) throw new Error(result.error || 'No se pudo transcribir. Reintenta.');
+      if (session !== dictationSession) return;
+      const field = mealForm.elements.ai_description;
+      field.value = [field.value.trim(), result.text].filter(Boolean).join('\n');
+      audioBlob = null;
+      dictationStatus.textContent = 'Dictado listo. Revisa el texto y genera la vista previa.';
+    } catch (error) {
+      if (session !== dictationSession) return;
+      dictationStatus.textContent = error.name === 'AbortError' ? 'La transcripción tardó demasiado. Puedes reintentar.' : error.message;
+      retryDictation.hidden = false;
+    } finally {
+      clearTimeout(timeout);
+      if (session === dictationSession) { setDictationBusy(false); recordButton.disabled = false; recordButton.textContent = 'Iniciar dictado'; }
+    }
+  };
+  retryDictation?.addEventListener('click', () => transcribeRecording(dictationSession));
+  recordButton?.addEventListener('click', async () => {
+    if (recorder?.state === 'recording') { recorder.stop(); return; }
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      dictationStatus.textContent = 'El dictado necesita HTTPS y un navegador con acceso al micrófono.';
+      return;
+    }
+    const session = ++dictationSession;
+    setDictationBusy(true);
+    recordButton.disabled = true;
+    dictationStatus.textContent = 'Esperando permiso del micrófono…';
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+      if (session !== dictationSession) { stream.getTracks().forEach((track) => track.stop()); return; }
+      microphone = stream;
+      const mimeType = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus'].find((type) => MediaRecorder.isTypeSupported(type));
+      if (!mimeType) throw new Error('Este navegador no ofrece un formato de grabación compatible. Prueba Chrome o Safari actualizado.');
+      const currentRecorder = new MediaRecorder(stream, {mimeType});
+      recorder = currentRecorder;
+      const chunks = [];
+      let bytes = 0;
+      audioBlob = null;
+      retryDictation.hidden = true;
+      currentRecorder.addEventListener('dataavailable', (event) => {
+        if (event.data.size) { chunks.push(event.data); bytes += event.data.size; }
+        if (bytes >= 9 * 1024 * 1024 && currentRecorder.state === 'recording') currentRecorder.stop();
+      });
+      currentRecorder.addEventListener('stop', () => {
+        if (session !== dictationSession) return;
+        releaseMicrophone();
+        audioBlob = new Blob(chunks, {type: currentRecorder.mimeType});
+        transcribeRecording(session);
+      });
+      currentRecorder.addEventListener('error', () => {
+        cancelDictation();
+        dictationStatus.textContent = 'No se pudo grabar el audio. Intenta de nuevo.';
+      });
+      currentRecorder.start(1000);
+      recordButton.disabled = false;
+      recordButton.textContent = 'Detener y transcribir';
+      const started = Date.now();
+      dictationStatus.textContent = 'Grabando… 0:00 / 3:00';
+      recordingTimer = setInterval(() => {
+        const seconds = Math.floor((Date.now() - started) / 1000);
+        dictationStatus.textContent = `Grabando… ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')} / 3:00`;
+        if (seconds >= 180 && currentRecorder.state === 'recording') currentRecorder.stop();
+      }, 1000);
+    } catch (error) {
+      if (session !== dictationSession) return;
+      cancelDictation();
+      dictationStatus.textContent = error.name === 'NotAllowedError' ? 'Permite el acceso al micrófono en tu navegador para dictar.' : (error.name === 'NotFoundError' ? 'No se encontró un micrófono.' : error.message);
+    }
+  });
+  mealForm?.querySelectorAll('[data-meal-source]').forEach((button) => button.addEventListener('click', () => {
+    mealForm.querySelectorAll('[data-meal-source]').forEach((item) => {
+      item.classList.toggle('active', item === button);
+      item.setAttribute('aria-pressed', String(item === button));
+    });
+    mealForm.querySelector('[data-meal-dictation]').hidden = button.dataset.mealSource !== 'voice';
+    if (button.dataset.mealSource === 'image') mealForm.querySelector('[data-meal-photo]').click();
+    if (button.dataset.mealSource === 'text') mealForm.elements.ai_description.focus();
+  }));
   document.querySelectorAll('[data-meal-mode]').forEach((button) => button.addEventListener('click', () => {
+    cancelDictation();
     const isAI = button.dataset.mealMode === 'ai';
     document.querySelectorAll('[data-meal-mode]').forEach((item) => item.classList.toggle('active', item === button));
     if (aiIntake) aiIntake.hidden = !isAI;
@@ -308,11 +432,16 @@
   });
 
   mealForm?.querySelector('[data-generate-meal]')?.addEventListener('click', async (event) => {
+    if (dictationBusy) return;
     const button = event.currentTarget;
     const status = mealForm.querySelector('[data-ai-status]');
     const payload = new FormData(mealForm);
     payload.set('action', 'meal-ai-preview');
+    mealGenerating = true;
     button.disabled = true;
+    mealForm.querySelectorAll('[data-meal-mode]').forEach((item) => { item.disabled = true; });
+    if (recordButton) recordButton.disabled = true;
+    if (retryDictation) retryDictation.disabled = true;
     if (status) status.textContent = 'Analizando…';
     try {
       const response = await fetch(location.href, {method: 'POST', body: payload, headers: {'X-Requested-With': 'XMLHttpRequest'}});
@@ -331,7 +460,7 @@
       if (status) status.textContent = `Vista previa generada · ${result.model}`;
     } catch (error) {
       if (status) status.textContent = error.message;
-    } finally { button.disabled = false; }
+    } finally { mealGenerating = false; mealForm.querySelectorAll('[data-meal-mode]').forEach((item) => { item.disabled = false; }); button.disabled = false; if (recordButton) recordButton.disabled = false; if (retryDictation) retryDictation.disabled = false; }
   });
 
   const noSleep = document.querySelector('[data-field="no_sleep"] input[name="no_sleep"]');

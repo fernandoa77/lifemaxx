@@ -301,3 +301,9 @@ h2 { font-size: 27px; line-height: 1.12; }
   .calorie-balance-result { align-items: start; flex-direction: column; gap: 8px; }
   .calorie-balance-result strong { font-size: 18px; text-align: left; }
 }
+
+.meal-source-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.meal-dictation { margin-bottom: 18px; padding: 14px; border: 1px solid #554d6e; border-radius: 9px; }
+.meal-dictation p { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.meal-dictation[hidden], [data-retry-dictation][hidden] { display: none; }
+.meal-source-tabs button:disabled { opacity: .5; cursor: wait; }

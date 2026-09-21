@@ -13,6 +13,60 @@ class AIUnavailable(RuntimeError):
     pass
 
 
+MAX_AUDIO_BYTES = 10 * 1024 * 1024
+AUDIO_FORMATS = {
+    "audio/webm": "webm", "audio/ogg": "ogg", "audio/mp4": "m4a",
+    "audio/mpeg": "mp3", "audio/wav": "wav", "audio/x-wav": "wav",
+    "audio/flac": "flac", "audio/aac": "aac",
+}
+
+
+def transcribe_audio(uploaded):
+    """Transcribe temporary audio with the existing OpenRouter credentials."""
+    if not uploaded or not uploaded.size:
+        raise ValueError("Graba un dictado antes de transcribir.")
+    if uploaded.size > MAX_AUDIO_BYTES:
+        raise ValueError("El audio supera los 10 MB. Graba un dictado más corto.")
+    mime = (uploaded.content_type or "").split(";", 1)[0].lower()
+    audio_format = AUDIO_FORMATS.get(mime)
+    if not audio_format:
+        raise ValueError("Formato de audio no compatible. Usa WebM, MP4, OGG, WAV, MP3, FLAC o AAC.")
+    if not settings.OPENROUTER_API_KEY:
+        raise AIUnavailable("Configura OPENROUTER_API_KEY para usar el dictado.")
+    uploaded.seek(0)
+    audio = uploaded.read(MAX_AUDIO_BYTES + 1)
+    if len(audio) > MAX_AUDIO_BYTES:
+        raise ValueError("El audio supera los 10 MB.")
+    payload = {
+        "model": settings.OPENROUTER_TRANSCRIPTION_MODEL,
+        "input_audio": {"data": base64.b64encode(audio).decode("ascii"), "format": audio_format},
+        "language": "es",
+        "response_format": "json",
+    }
+    request = urllib.request.Request(
+        f"{settings.OPENROUTER_BASE_URL.rstrip('/')}/audio/transcriptions",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": settings.OPENROUTER_HTTP_REFERER,
+            "X-OpenRouter-Title": settings.OPENROUTER_APP_TITLE,
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=settings.OPENROUTER_TIMEOUT) as response:
+            body = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        raise AIUnavailable(f"OpenRouter no pudo transcribir ({exc.code}). Reintenta o revisa tu configuración y saldo.") from exc
+    except (urllib.error.URLError, TimeoutError, ValueError) as exc:
+        raise AIUnavailable("No se pudo conectar con la transcripción. Reintenta.") from exc
+    transcript = body.get("text") if isinstance(body, dict) else None
+    if not isinstance(transcript, str) or not transcript.strip():
+        raise AIUnavailable("No se reconoció voz. Reintenta hablando cerca del micrófono.")
+    return transcript.strip()
+
+
 def _data_url(path):
     file_path = Path(path)
     mime = mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"
